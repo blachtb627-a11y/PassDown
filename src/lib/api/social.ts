@@ -28,7 +28,7 @@ export async function toggleFollow(
 
 export async function fetchProfileWithCounts(userId: string): Promise<Author | null> {
   const [{ data: profileRow, error: profileError }, followerCountRes, followingCountRes] = await Promise.all([
-    supabase.from('profiles').select('id, full_name, avatar_url, bio').eq('id', userId).maybeSingle(),
+    supabase.from('profiles').select('id, full_name, username, avatar_url, bio').eq('id', userId).maybeSingle(),
     supabase.from('follows').select('follower_id', { count: 'exact', head: true }).eq('followee_id', userId),
     supabase.from('follows').select('followee_id', { count: 'exact', head: true }).eq('follower_id', userId),
   ]);
@@ -41,4 +41,14 @@ export async function fetchProfileWithCounts(userId: string): Promise<Author | n
     followerCount: followerCountRes.count ?? 0,
     followingCount: followingCountRes.count ?? 0,
   };
+}
+
+export async function isUsernameTaken(username: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .ilike('username', username)
+    .maybeSingle();
+  if (error) throw error;
+  return !!data;
 }

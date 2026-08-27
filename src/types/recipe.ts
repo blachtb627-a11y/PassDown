@@ -20,6 +20,7 @@ export type Occasion = 'Weeknight' | 'Holiday' | 'Potluck' | 'Special Occasion';
 export type Author = {
   id: string;
   name: string;
+  username: string;
   avatarUri?: string;
   bio?: string;
   followerCount: number;

@@ -25,6 +25,7 @@ import { uploadPhoto } from '../lib/api/photos';
 const GUEST_USER: Author = {
   id: 'guest',
   name: 'Guest',
+  username: '',
   bio: '',
   followerCount: 0,
   followingCount: 0,
@@ -97,10 +98,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const currentUser: Author = useMemo(() => {
     if (!session?.user) return GUEST_USER;
-    const fullName = (session.user.user_metadata as { full_name?: string } | undefined)?.full_name;
+    const metadata = session.user.user_metadata as { full_name?: string; username?: string } | undefined;
     return {
       id: session.user.id,
-      name: fullName?.trim() || session.user.email?.split('@')[0] || 'You',
+      name: metadata?.full_name?.trim() || session.user.email?.split('@')[0] || 'You',
+      username: metadata?.username ?? '',
       bio: '',
       followerCount: 0,
       followingCount: 0,

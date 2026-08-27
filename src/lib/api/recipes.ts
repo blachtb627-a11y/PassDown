@@ -4,9 +4,9 @@ import { mapRecipe, RecipeRowWithRelations } from './mappers';
 
 const RECIPE_SELECT = `
   *,
-  author:profiles!recipes_author_id_fkey(id, full_name, avatar_url, bio),
-  comments(id, text, created_at, author:profiles!comments_author_id_fkey(id, full_name, avatar_url, bio)),
-  made_this_posts(id, photo_url, note, created_at, author:profiles!made_this_posts_author_id_fkey(id, full_name, avatar_url, bio))
+  author:profiles!recipes_author_id_fkey(id, full_name, username, avatar_url, bio),
+  comments(id, text, created_at, author:profiles!comments_author_id_fkey(id, full_name, username, avatar_url, bio)),
+  made_this_posts(id, photo_url, note, created_at, author:profiles!made_this_posts_author_id_fkey(id, full_name, username, avatar_url, bio))
 `;
 
 export async function fetchFeedRecipes(): Promise<Recipe[]> {

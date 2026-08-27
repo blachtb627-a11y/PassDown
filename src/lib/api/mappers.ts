@@ -1,7 +1,7 @@
 import { Author, Collection, Comment, Ingredient, MadeThisPost, Recipe, ShoppingListItem, Step } from '../../types/recipe';
 import { Tables } from '../database.types';
 
-type ProfileRow = Pick<Tables<'profiles'>, 'id' | 'full_name' | 'avatar_url' | 'bio'>;
+type ProfileRow = Pick<Tables<'profiles'>, 'id' | 'full_name' | 'username' | 'avatar_url' | 'bio'>;
 type RecipeRow = Tables<'recipes'>;
 type CommentRow = Pick<Tables<'comments'>, 'id' | 'text' | 'created_at'> & { author: ProfileRow | null };
 type MadeThisRow = Pick<Tables<'made_this_posts'>, 'id' | 'photo_url' | 'note' | 'created_at'> & {
@@ -18,6 +18,7 @@ export function mapAuthor(row: ProfileRow | null, fallbackId: string): Author {
   return {
     id: row?.id ?? fallbackId,
     name: row?.full_name || 'Unknown Cook',
+    username: row?.username ?? '',
     avatarUri: row?.avatar_url ?? undefined,
     bio: row?.bio ?? '',
     followerCount: 0,

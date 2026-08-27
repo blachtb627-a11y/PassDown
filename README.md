@@ -62,6 +62,8 @@ Sign-up/log-in/log-out is real, backed by [Supabase](https://supabase.com)'s fre
 
 Email/password is the sign-up method (simplest for the least tech-savvy users per the brief's open question in section 18, and needs no extra provider setup). Supabase's Email provider is on by default and requires confirming a link sent to your inbox before you can log in — there's a "Check your email" screen after signing up for exactly that reason. Until the two env vars above are set (locally or in CI), the app shows an "Almost ready" screen instead of crashing.
 
+Every account also gets a **unique username** (separate from the display name) — the sign-up form checks availability as you type, and a unique index in Postgres (`profiles_username_unique_idx`, case-insensitive) is the actual enforcement, so a race between two people signing up with the same username at the same instant still can't succeed. **One account per email** and **email confirmation before login** are both Supabase Auth's own default behavior, not something this app's code enforces — double-check under your project's **Authentication → Sign In / Providers → Email** settings that "Confirm email" is on and duplicate emails aren't explicitly allowed, if you ever want to verify those defaults haven't been changed.
+
 ## Running it
 
 ```bash
@@ -89,9 +91,9 @@ https://passdown.it.com
 
 ## Data model
 
-Applied directly to the Supabase project via migrations (visible in the Supabase dashboard's migration history, not checked into this repo as SQL files yet — see below):
+Applied to the Supabase project via migrations. The initial schema was applied directly and isn't checked in as SQL yet (see Next Steps); `supabase/migrations/` holds changes made since, starting with the username addition below.
 
-- `profiles` — one row per account, auto-created (with two starter collections) by a trigger on signup.
+- `profiles` — one row per account, auto-created (with two starter collections) by a trigger on signup. `username` is required and unique (case-insensitive); `full_name` is a separate, non-unique display name.
 - `recipes` — ingredients/steps stored as JSONB (matches the app's nested shape exactly); `like_count`/`comment_count` kept in sync by triggers.
 - `comments`, `made_this_posts`, `likes`, `saves`, `follows`, `collections`, `collection_recipes`, `shopping_list_items`.
 
@@ -101,7 +103,7 @@ Every table has row-level security: published recipes and social data (comments,
 
 The brief's remaining [open questions](#) (private/family sharing, remix attribution, feed algorithm balance, and voice control in Cook Mode) are still open — worth resolving before the following:
 
-1. **Check migrations into the repo** — the schema was applied straight to the live Supabase project rather than as versioned SQL files under a `supabase/migrations/` folder; worth doing once the schema settles down, so it's reviewable and reproducible from git.
+1. **Check the initial schema into the repo too** — everything through the social/collections tables was applied straight to the live project before `supabase/migrations/` existed; worth backfilling as a migration file so the full schema history is reproducible from git, not just changes made since.
 2. **Onboarding carousel** — the brief's 3-screen skippable welcome + guided first-post walkthrough (section 8.3) isn't built; today sign-up goes straight from Welcome to the app.
 3. **"I made this!" posting UI** — the data model and detail-screen display exist, but there's no button yet for a viewer to actually submit their own attempt photo.
 4. **Push notifications** — the notification types exist in Settings as toggles but don't fire real notifications yet.

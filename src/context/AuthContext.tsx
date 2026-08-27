@@ -6,7 +6,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 type AuthContextValue = {
   session: Session | null;
   isLoading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName: string, username: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
@@ -52,13 +52,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       session,
       isLoading,
-      signUp: async (email, password, fullName) => {
+      signUp: async (email, password, fullName, username) => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName } },
+          options: { data: { full_name: fullName, username } },
         });
-        return { error: error?.message ?? null };
+        if (error) {
+          // Supabase wraps a failed post-signup trigger (e.g. our unique-username
+          // constraint) as a generic "Database error saving new user" — the specific
+          // Postgres message doesn't make it through, so translate the common case.
+          const message = /database error saving new user/i.test(error.message)
+            ? 'That username is already taken. Please choose another.'
+            : error.message;
+          return { error: message };
+        }
+        return { error: null };
       },
       signIn: async (email, password) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

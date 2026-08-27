@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
-import { categories } from '../data/mockRecipes';
+import { categories } from '../data/categories';
 import { RecipeCard } from '../components/RecipeCard';
 import { FilterChip } from '../components/FilterChip';
 import { CategoryTile } from '../components/CategoryTile';

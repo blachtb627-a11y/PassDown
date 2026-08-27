@@ -1,29 +1,59 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
+import { isUsernameTaken } from '../../lib/api/social';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { colors } from '../../theme/colors';
 import { radius, spacing, typography } from '../../theme/typography';
+
+const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
+
+type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
 export function SignUpScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmationSent, setConfirmationSent] = useState(false);
 
-  const canSubmit = fullName.trim().length > 0 && email.trim().length > 0 && password.length >= 6;
+  useEffect(() => {
+    const trimmed = username.trim();
+    if (!trimmed) {
+      setUsernameStatus('idle');
+      return;
+    }
+    if (!USERNAME_PATTERN.test(trimmed)) {
+      setUsernameStatus('invalid');
+      return;
+    }
+    setUsernameStatus('checking');
+    const timeout = setTimeout(() => {
+      isUsernameTaken(trimmed)
+        .then((taken) => setUsernameStatus(taken ? 'taken' : 'available'))
+        .catch(() => setUsernameStatus('idle'));
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [username]);
+
+  const canSubmit =
+    fullName.trim().length > 0 &&
+    usernameStatus === 'available' &&
+    email.trim().length > 0 &&
+    password.length >= 6;
 
   const handleSignUp = async () => {
     setError(null);
     setIsSubmitting(true);
-    const { error: signUpError } = await signUp(email.trim(), password, fullName.trim());
+    const { error: signUpError } = await signUp(email.trim(), password, fullName.trim(), username.trim());
     setIsSubmitting(false);
     if (signUpError) {
       setError(signUpError);
@@ -46,6 +76,13 @@ export function SignUpScreen() {
     );
   }
 
+  const usernameMessage: Record<Exclude<UsernameStatus, 'idle'>, string> = {
+    checking: 'Checking availability...',
+    available: 'Username available',
+    taken: 'That username is already taken.',
+    invalid: '3-20 letters, numbers, or underscores.',
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -61,6 +98,29 @@ export function SignUpScreen() {
             onChangeText={setFullName}
             autoCapitalize="words"
           />
+
+          <Text style={[typography.bodyBold, styles.label]}>Username</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="janedoe"
+            placeholderTextColor={colors.textMuted}
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {usernameStatus !== 'idle' ? (
+            <Text
+              style={[
+                typography.meta,
+                styles.usernameStatus,
+                usernameStatus === 'available' && styles.usernameAvailable,
+                (usernameStatus === 'taken' || usernameStatus === 'invalid') && styles.usernameTaken,
+              ]}
+            >
+              {usernameMessage[usernameStatus]}
+            </Text>
+          ) : null}
 
           <Text style={[typography.bodyBold, styles.label]}>Email</Text>
           <TextInput
@@ -111,6 +171,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     ...typography.body,
   },
+  usernameStatus: { marginTop: spacing.xs, color: colors.textMuted },
+  usernameAvailable: { color: colors.success },
+  usernameTaken: { color: colors.danger },
   error: { color: colors.danger, marginTop: spacing.md },
   buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
 });

@@ -92,6 +92,7 @@ export function ProfileScreen() {
               />
               <View style={{ flex: 1 }}>
                 <Text style={typography.subtitle}>{profileAuthor.name}</Text>
+                {profileAuthor.username ? <Text style={typography.meta}>@{profileAuthor.username}</Text> : null}
                 {profileAuthor.bio ? <Text style={typography.body}>{profileAuthor.bio}</Text> : null}
                 <View style={styles.countsRow}>
                   <Text style={typography.meta}>
