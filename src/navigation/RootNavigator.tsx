@@ -12,6 +12,7 @@ import { PostRecipeScreen } from '../screens/PostRecipe/PostRecipeScreen';
 import { ShoppingListScreen } from '../screens/ShoppingListScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { AdminPortalScreen } from '../screens/AdminPortalScreen';
 import { colors } from '../theme/colors';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -41,6 +42,7 @@ export function RootNavigator() {
           <Stack.Screen name="UserProfile" component={ProfileScreen} options={{ title: 'Profile' }} />
           <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: 'Shopping List' }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+          <Stack.Screen name="AdminPortal" component={AdminPortalScreen} options={{ title: 'Admin Portal' }} />
         </>
       ) : (
         <>

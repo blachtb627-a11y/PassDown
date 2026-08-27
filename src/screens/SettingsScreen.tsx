@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
+import { isCurrentUserAdmin } from '../lib/api/admin';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { colors } from '../theme/colors';
 import { spacing, typography } from '../theme/typography';
@@ -22,11 +26,17 @@ function ToggleRow({ label, value, onValueChange }: ToggleRowProps) {
 }
 
 export function SettingsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { session, signOut } = useAuth();
   const [notifyFollowers, setNotifyFollowers] = useState(true);
   const [notifyLikesComments, setNotifyLikesComments] = useState(true);
   const [notifyMadeThis, setNotifyMadeThis] = useState(true);
   const [notifyDigest, setNotifyDigest] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    isCurrentUserAdmin().then(setIsAdmin);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -42,6 +52,18 @@ export function SettingsScreen() {
         <View style={styles.signOutButton}>
           <PrimaryButton label="Log Out" variant="outline" onPress={signOut} />
         </View>
+
+        {isAdmin ? (
+          <>
+            <Text style={[typography.subtitle, styles.sectionSpacing]}>Admin</Text>
+            <PrimaryButton
+              label="Admin Portal"
+              icon="shield-checkmark-outline"
+              variant="outline"
+              onPress={() => navigation.navigate('AdminPortal')}
+            />
+          </>
+        ) : null}
 
         <Text style={[typography.subtitle, styles.sectionSpacing]}>About</Text>
         <Text style={typography.body}>PassDown — an easy, warm place to share the recipes we cook for the people we love.</Text>

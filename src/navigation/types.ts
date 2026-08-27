@@ -9,6 +9,7 @@ export type RootStackParamList = {
   UserProfile: { userId: string };
   ShoppingList: undefined;
   Settings: undefined;
+  AdminPortal: undefined;
 };
 
 export type TabParamList = {

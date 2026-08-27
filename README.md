@@ -99,6 +99,19 @@ Applied to the Supabase project via migrations. The initial schema was applied d
 
 Every table has row-level security: published recipes and social data (comments, likes, follows) are readable by everyone, but people can only write their own rows; saves, collections, and the shopping list are private per-account.
 
+## Admin portal
+
+A hidden "Admin Portal" entry appears in Settings for admin accounts only — it lists every signed-up account (email, name, username, join date, last active, email-verified status) and can delete an account entirely.
+
+There's no separate admin login — admin-ness is a permission on a normal account, not a different auth system. That's deliberate: a second parallel login for the same accounts would be more attack surface to secure without adding real protection.
+
+- **Who's an admin** lives in its own `public.admins` table (`supabase/migrations/..._add_admins_table.sql`), never a column on `profiles` — so there is no path for a user to grant themselves admin by updating their own profile. Granting admin is a manual one-time SQL statement run by whoever owns the Supabase project:
+  ```sql
+  insert into public.admins (user_id) values ('<user-uuid-here>');
+  ```
+- **Listing every account's email and last-sign-in time, and deleting accounts,** both require Supabase's service-role key — which must never ship inside the app bundle. So this work happens in a Supabase Edge Function (`supabase/functions/admin-api/`), which itself checks the caller against the `admins` table (using the caller's own session, respecting RLS) *before* touching the service-role client. The app's `isCurrentUserAdmin()` check (`src/lib/api/admin.ts`) only gates the UI — the Edge Function is the real enforcement boundary.
+- Deleting a user cascades (via each table's `on delete cascade` foreign key) to their profile, recipes, comments, likes, saves, follows, and collections automatically.
+
 ## Next steps
 
 The brief's remaining [open questions](#) (private/family sharing, remix attribution, feed algorithm balance, and voice control in Cook Mode) are still open — worth resolving before the following:
