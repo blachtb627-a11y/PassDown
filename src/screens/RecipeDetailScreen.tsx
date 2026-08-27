@@ -128,9 +128,13 @@ export function RecipeDetailScreen() {
           label="Add to Shopping List"
           icon="cart-outline"
           variant="outline"
-          onPress={() => {
-            addRecipeIngredientsToShoppingList(recipe);
-            Alert.alert('Added!', 'Ingredients added to your Shopping List.');
+          onPress={async () => {
+            try {
+              await addRecipeIngredientsToShoppingList(recipe);
+              Alert.alert('Added!', 'Ingredients added to your Shopping List.');
+            } catch (error) {
+              Alert.alert('Something went wrong', 'Could not add ingredients to your Shopping List.');
+            }
           }}
         />
       </View>

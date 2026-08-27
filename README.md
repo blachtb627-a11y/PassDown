@@ -6,7 +6,7 @@ A mobile-first recipe-sharing app for everyday home cooks (not influencers or fo
 
 ## Status
 
-This is the **MVP scaffold** — every screen from the brief's MVP scope is built and navigable. Accounts are real (Supabase Auth: sign up, log in, log out, sessions persist across restarts). Recipe data itself is still local to the device (`AsyncStorage`) — posting, saving, following, liking, and shopping-list actions all work and persist across app restarts, but recipes don't yet sync across devices or between different users' accounts. See [Next Steps](#next-steps) below.
+This is the **MVP** — every screen from the brief's MVP scope is built and navigable, backed by a real Supabase project: real accounts, and real recipes/comments/likes/saves/follows/collections/shopping-list shared across every user and device, enforced by row-level security so people can only edit their own data. See [Next Steps](#next-steps) below for what's still deliberately out of scope.
 
 ## Tech stack
 
@@ -14,9 +14,9 @@ This is the **MVP scaffold** — every screen from the brief's MVP scope is buil
 |---|---|---|
 | App framework | [Expo](https://expo.dev) (React Native + TypeScript) | Brief calls for real iOS/Android apps (section 15); Expo gives one codebase, fast iteration, and a clear path to native builds via EAS. |
 | Navigation | React Navigation (bottom tabs + native stack) | Matches the brief's 5-tab IA (section 7) with a modal posting flow and pushed detail/cook-mode screens. |
-| Auth | [Supabase Auth](https://supabase.com) | Real email/password accounts with almost no backend code to run ourselves; session persistence handled by `supabase-js` + `AsyncStorage`. |
-| Data (for now) | React Context + `AsyncStorage` | Recipe data has no backend yet; this keeps the app fully functional and persistent locally while keeping all data access behind one `useAppState()` hook, so moving recipes to Supabase later (or any backend) means changing one file, not every screen. |
-| Images | `expo-image-picker` | Camera + photo library picking for recipe/step photos. |
+| Backend | [Supabase](https://supabase.com) | Postgres + Auth + Storage in one place, with almost no server code to run ourselves. Auth handles accounts/sessions; Postgres (with row-level security) holds recipes, comments, likes, saves, follows, collections, and the shopping list; Storage holds recipe/step photos. |
+| Data access | React Context (`useAppState()`) over a small `src/lib/api/` layer | Every screen reads/writes through one hook; the Supabase queries live in one place so the query layer can change without touching screens. |
+| Images | `expo-image-picker` + Supabase Storage | Camera + photo library picking, uploaded to a public `recipe-photos` bucket so photos are visible to every user, not just the device that took them. |
 | Cook Mode | `expo-keep-awake` | Keeps the screen from sleeping while cooking, per section 4.8. |
 
 ## What's implemented (MVP, brief section 4)
@@ -44,7 +44,7 @@ src/
   theme/        colors, typography, spacing (brief section 10)
   types/        Recipe, Ingredient, Step, Collection, ShoppingListItem, Author...
   data/         category tiles for Search/Discover browsing
-  lib/          supabase.ts — the Supabase client
+  lib/          supabase.ts (client), database.types.ts (generated), api/ (recipes, social, collections, shoppingList, photos)
   context/      AuthContext (real sessions) + AppStateContext (recipes/collections/etc.)
   navigation/   bottom tabs (with the emphasized center Post button) + root stack, gated on session
   screens/      one file/folder per screen from the brief's screen-by-screen breakdown, plus screens/Auth/
@@ -83,12 +83,22 @@ https://blachtb627-a11y.github.io/PassDown/
 
 and stays up to date automatically as this branch is pushed. A few phone-only bits (camera capture, keep-screen-awake in Cook Mode) fall back to browser equivalents or no-ops on web — the mobile app is the real target.
 
+## Data model
+
+Applied directly to the Supabase project via migrations (visible in the Supabase dashboard's migration history, not checked into this repo as SQL files yet — see below):
+
+- `profiles` — one row per account, auto-created (with two starter collections) by a trigger on signup.
+- `recipes` — ingredients/steps stored as JSONB (matches the app's nested shape exactly); `like_count`/`comment_count` kept in sync by triggers.
+- `comments`, `made_this_posts`, `likes`, `saves`, `follows`, `collections`, `collection_recipes`, `shopping_list_items`.
+
+Every table has row-level security: published recipes and social data (comments, likes, follows) are readable by everyone, but people can only write their own rows; saves, collections, and the shopping list are private per-account.
+
 ## Next steps
 
 The brief's remaining [open questions](#) (private/family sharing, remix attribution, feed algorithm balance, and voice control in Cook Mode) are still open — worth resolving before the following:
 
-1. **Move recipe data to Supabase too** — accounts are real now, but recipes/collections/shopping-list/likes still live in local `AsyncStorage`, so they don't sync across devices or between users. Same database as auth, so this is schema + swapping `AppStateContext`'s storage calls for Supabase queries, not a new backend.
+1. **Check migrations into the repo** — the schema was applied straight to the live Supabase project rather than as versioned SQL files under a `supabase/migrations/` folder; worth doing once the schema settles down, so it's reviewable and reproducible from git.
 2. **Onboarding carousel** — the brief's 3-screen skippable welcome + guided first-post walkthrough (section 8.3) isn't built; today sign-up goes straight from Welcome to the app.
-3. **Real image uploads** — photos currently stay as local device URIs; wiring them to Supabase Storage is part of step 1.
+3. **"I made this!" posting UI** — the data model and detail-screen display exist, but there's no button yet for a viewer to actually submit their own attempt photo.
 4. **Push notifications** — the notification types exist in Settings as toggles but don't fire real notifications yet.
 5. **Phase 2 features** (brief section 5) — video steps, voice-guided Cook Mode, family/private groups, ratings, meal planning, unit conversion, PDF export — intentionally out of scope for this MVP pass.

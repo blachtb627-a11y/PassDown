@@ -1,9 +1,26 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { Author, Collection, Recipe, ShoppingListItem } from '../types/recipe';
-
-const STORAGE_KEY = 'passdown:app-state:v1';
+import {
+  addComment as apiAddComment,
+  addMadeThisPost as apiAddMadeThisPost,
+  fetchFeedRecipes,
+  fetchLikedRecipeIds,
+  fetchRecipesByAuthor,
+  fetchSavedRecipeIds,
+  toggleLike as apiToggleLike,
+  toggleSave as apiToggleSave,
+  upsertRecipe,
+} from '../lib/api/recipes';
+import { fetchFollowedAuthorIds, toggleFollow as apiToggleFollow } from '../lib/api/social';
+import { createCollection as apiCreateCollection, fetchCollections } from '../lib/api/collections';
+import {
+  addRecipeIngredientsToShoppingList as apiAddRecipeIngredientsToShoppingList,
+  clearCheckedShoppingListItems as apiClearCheckedShoppingListItems,
+  fetchShoppingList,
+  toggleShoppingListItem as apiToggleShoppingListItem,
+} from '../lib/api/shoppingList';
+import { uploadPhoto } from '../lib/api/photos';
 
 const GUEST_USER: Author = {
   id: 'guest',
@@ -13,56 +30,69 @@ const GUEST_USER: Author = {
   followingCount: 0,
 };
 
-type PersistedState = {
+function dedupeRecipesById(recipes: Recipe[]): Recipe[] {
+  const seen = new Set<string>();
+  const result: Recipe[] = [];
+  for (const recipe of recipes) {
+    if (seen.has(recipe.id)) continue;
+    seen.add(recipe.id);
+    result.push(recipe);
+  }
+  return result;
+}
+
+export type RecipeFormInput = {
+  id?: string;
+  title: string;
+  story?: string;
+  photos: string[];
+  ingredients: Recipe['ingredients'];
+  steps: Recipe['steps'];
+  prepMinutes?: number;
+  cookMinutes?: number;
+  servings?: number;
+  cuisine?: string;
+  mealType?: Recipe['mealType'];
+  diet?: Recipe['diet'];
+  difficulty?: Recipe['difficulty'];
+  occasion?: Recipe['occasion'];
+  isDraft: boolean;
+};
+
+type AppStateContextValue = {
   recipes: Recipe[];
   savedRecipeIds: string[];
   likedRecipeIds: string[];
   collections: Collection[];
   shoppingList: ShoppingListItem[];
   followedAuthorIds: string[];
-};
-
-const defaultCollections: Collection[] = [
-  { id: 'col-quick-dinners', name: 'Quick Dinners', recipeIds: [] },
-  { id: 'col-holiday', name: 'Holiday', recipeIds: [] },
-];
-
-const defaultState: PersistedState = {
-  recipes: [],
-  savedRecipeIds: [],
-  likedRecipeIds: [],
-  collections: defaultCollections,
-  shoppingList: [],
-  followedAuthorIds: [],
-};
-
-type AppStateContextValue = PersistedState & {
   isLoaded: boolean;
   currentUser: Author;
-  addRecipe: (recipe: Recipe) => void;
-  updateRecipe: (recipe: Recipe) => void;
+  saveRecipe: (input: RecipeFormInput) => Promise<Recipe>;
   toggleSaveRecipe: (recipeId: string) => void;
   toggleLikeRecipe: (recipeId: string) => void;
   toggleFollowAuthor: (authorId: string) => void;
-  createCollection: (name: string) => Collection;
-  addRecipeToCollection: (recipeId: string, collectionId: string) => void;
-  removeRecipeFromCollection: (recipeId: string, collectionId: string) => void;
-  addRecipeIngredientsToShoppingList: (recipe: Recipe) => void;
+  createCollection: (name: string) => Promise<void>;
+  addRecipeIngredientsToShoppingList: (recipe: Recipe) => Promise<void>;
   toggleShoppingListItem: (itemId: string) => void;
   clearCheckedShoppingListItems: () => void;
-  addMadeThisPost: (recipeId: string, photoUri: string, note?: string) => void;
+  addMadeThisPost: (recipeId: string, localPhotoUri: string, note?: string) => Promise<void>;
   addComment: (recipeId: string, text: string) => void;
+  refetch: () => Promise<void>;
 };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
 
-function normalizeItemKey(item: string, unit: string) {
-  return `${item.trim().toLowerCase()}|${unit.trim().toLowerCase()}`;
-}
-
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
-  const [state, setState] = useState<PersistedState>(defaultState);
+  const userId = session?.user.id ?? null;
+
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [savedRecipeIds, setSavedRecipeIds] = useState<string[]>([]);
+  const [likedRecipeIds, setLikedRecipeIds] = useState<string[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
+  const [followedAuthorIds, setFollowedAuthorIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const currentUser: Author = useMemo(() => {
@@ -77,198 +107,200 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     };
   }, [session]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          setState({ ...defaultState, ...JSON.parse(raw) });
-        }
-      } catch {
-        // fall back to default state if storage is unavailable or corrupt
-      } finally {
-        setIsLoaded(true);
-      }
-    })();
-  }, []);
+  const refetch = useCallback(async () => {
+    if (!userId) {
+      setRecipes([]);
+      setSavedRecipeIds([]);
+      setLikedRecipeIds([]);
+      setCollections([]);
+      setShoppingList([]);
+      setFollowedAuthorIds([]);
+      setIsLoaded(true);
+      return;
+    }
+    try {
+      const [feed, myRecipes, saved, liked, cols, list, followed] = await Promise.all([
+        fetchFeedRecipes(),
+        fetchRecipesByAuthor(userId),
+        fetchSavedRecipeIds(userId),
+        fetchLikedRecipeIds(userId),
+        fetchCollections(userId),
+        fetchShoppingList(userId),
+        fetchFollowedAuthorIds(userId),
+      ]);
+      setRecipes(dedupeRecipesById([...feed, ...myRecipes]));
+      setSavedRecipeIds(saved);
+      setLikedRecipeIds(liked);
+      setCollections(cols);
+      setShoppingList(list);
+      setFollowedAuthorIds(followed);
+    } catch (error) {
+      console.error('Failed to load PassDown data', error);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, [userId]);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
-  }, [state, isLoaded]);
+    setIsLoaded(false);
+    refetch();
+  }, [refetch]);
 
   const value = useMemo<AppStateContextValue>(() => {
-    const addRecipe = (recipe: Recipe) => {
-      setState((prev) => ({ ...prev, recipes: [recipe, ...prev.recipes] }));
-    };
+    const saveRecipe = async (input: RecipeFormInput): Promise<Recipe> => {
+      const uploadIfLocal = (uri: string) => (uri.startsWith('http') ? Promise.resolve(uri) : uploadPhoto(uri, currentUser.id));
 
-    const updateRecipe = (recipe: Recipe) => {
-      setState((prev) => ({
-        ...prev,
-        recipes: prev.recipes.map((r) => (r.id === recipe.id ? recipe : r)),
-      }));
+      const uploadedPhotos = await Promise.all(input.photos.map(uploadIfLocal));
+      const uploadedSteps = await Promise.all(
+        input.steps.map(async (step) => ({
+          ...step,
+          photoUri: step.photoUri ? await uploadIfLocal(step.photoUri) : undefined,
+        }))
+      );
+      const recipe = await upsertRecipe(currentUser.id, { ...input, photos: uploadedPhotos, steps: uploadedSteps });
+      setRecipes((prev) => {
+        const withoutThis = prev.filter((r) => r.id !== recipe.id);
+        return [recipe, ...withoutThis];
+      });
+      return recipe;
     };
 
     const toggleSaveRecipe = (recipeId: string) => {
-      setState((prev) => {
-        const isSaved = prev.savedRecipeIds.includes(recipeId);
-        return {
-          ...prev,
-          savedRecipeIds: isSaved
-            ? prev.savedRecipeIds.filter((id) => id !== recipeId)
-            : [...prev.savedRecipeIds, recipeId],
-        };
+      const wasSaved = savedRecipeIds.includes(recipeId);
+      setSavedRecipeIds((prev) => (wasSaved ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]));
+      apiToggleSave(recipeId, currentUser.id, wasSaved).catch((error) => {
+        console.error('Failed to save/unsave recipe', error);
+        setSavedRecipeIds((prev) => (wasSaved ? [...prev, recipeId] : prev.filter((id) => id !== recipeId)));
       });
     };
 
     const toggleLikeRecipe = (recipeId: string) => {
-      setState((prev) => {
-        const isLiked = prev.likedRecipeIds.includes(recipeId);
-        return {
-          ...prev,
-          likedRecipeIds: isLiked
-            ? prev.likedRecipeIds.filter((id) => id !== recipeId)
-            : [...prev.likedRecipeIds, recipeId],
-          recipes: prev.recipes.map((r) =>
-            r.id === recipeId ? { ...r, likeCount: r.likeCount + (isLiked ? -1 : 1) } : r
-          ),
-        };
+      const wasLiked = likedRecipeIds.includes(recipeId);
+      setLikedRecipeIds((prev) => (wasLiked ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]));
+      setRecipes((prev) =>
+        prev.map((r) => (r.id === recipeId ? { ...r, likeCount: r.likeCount + (wasLiked ? -1 : 1) } : r))
+      );
+      apiToggleLike(recipeId, currentUser.id, wasLiked).catch((error) => {
+        console.error('Failed to like/unlike recipe', error);
+        setLikedRecipeIds((prev) => (wasLiked ? [...prev, recipeId] : prev.filter((id) => id !== recipeId)));
+        setRecipes((prev) =>
+          prev.map((r) => (r.id === recipeId ? { ...r, likeCount: r.likeCount + (wasLiked ? 1 : -1) } : r))
+        );
       });
     };
 
     const toggleFollowAuthor = (authorId: string) => {
-      setState((prev) => {
-        const isFollowing = prev.followedAuthorIds.includes(authorId);
-        return {
-          ...prev,
-          followedAuthorIds: isFollowing
-            ? prev.followedAuthorIds.filter((id) => id !== authorId)
-            : [...prev.followedAuthorIds, authorId],
-        };
+      const wasFollowing = followedAuthorIds.includes(authorId);
+      setFollowedAuthorIds((prev) => (wasFollowing ? prev.filter((id) => id !== authorId) : [...prev, authorId]));
+      apiToggleFollow(currentUser.id, authorId, wasFollowing).catch((error) => {
+        console.error('Failed to follow/unfollow', error);
+        setFollowedAuthorIds((prev) =>
+          wasFollowing ? [...prev, authorId] : prev.filter((id) => id !== authorId)
+        );
       });
     };
 
-    const createCollection = (name: string): Collection => {
-      const collection: Collection = { id: `col-${Date.now()}`, name, recipeIds: [] };
-      setState((prev) => ({ ...prev, collections: [...prev.collections, collection] }));
-      return collection;
+    const createCollection = async (name: string) => {
+      try {
+        const collection = await apiCreateCollection(currentUser.id, name);
+        setCollections((prev) => [...prev, collection]);
+      } catch (error) {
+        console.error('Failed to create collection', error);
+      }
     };
 
-    const addRecipeToCollection = (recipeId: string, collectionId: string) => {
-      setState((prev) => ({
-        ...prev,
-        savedRecipeIds: prev.savedRecipeIds.includes(recipeId)
-          ? prev.savedRecipeIds
-          : [...prev.savedRecipeIds, recipeId],
-        collections: prev.collections.map((c) =>
-          c.id === collectionId && !c.recipeIds.includes(recipeId)
-            ? { ...c, recipeIds: [...c.recipeIds, recipeId] }
-            : c
-        ),
-      }));
-    };
-
-    const removeRecipeFromCollection = (recipeId: string, collectionId: string) => {
-      setState((prev) => ({
-        ...prev,
-        collections: prev.collections.map((c) =>
-          c.id === collectionId ? { ...c, recipeIds: c.recipeIds.filter((id) => id !== recipeId) } : c
-        ),
-      }));
-    };
-
-    const addRecipeIngredientsToShoppingList = (recipe: Recipe) => {
-      setState((prev) => {
-        const list = [...prev.shoppingList];
-        for (const ingredient of recipe.ingredients) {
-          const key = normalizeItemKey(ingredient.item, ingredient.unit);
-          const existing = list.find(
-            (li) => normalizeItemKey(li.item, li.unit) === key && !li.fromRecipeIds.includes(recipe.id)
-          );
-          if (existing) {
-            existing.fromRecipeIds = [...existing.fromRecipeIds, recipe.id];
-          } else {
-            list.push({
-              id: `sl-${ingredient.id}-${recipe.id}-${Date.now()}`,
-              item: ingredient.item,
-              quantity: ingredient.quantity,
-              unit: ingredient.unit,
-              checked: false,
-              fromRecipeIds: [recipe.id],
-            });
-          }
-        }
-        return { ...prev, shoppingList: list };
-      });
+    const addRecipeIngredientsToShoppingList = async (recipe: Recipe) => {
+      await apiAddRecipeIngredientsToShoppingList(currentUser.id, recipe);
+      setShoppingList(await fetchShoppingList(currentUser.id));
     };
 
     const toggleShoppingListItem = (itemId: string) => {
-      setState((prev) => ({
-        ...prev,
-        shoppingList: prev.shoppingList.map((item) =>
-          item.id === itemId ? { ...item, checked: !item.checked } : item
-        ),
-      }));
+      const item = shoppingList.find((i) => i.id === itemId);
+      if (!item) return;
+      setShoppingList((prev) => prev.map((i) => (i.id === itemId ? { ...i, checked: !i.checked } : i)));
+      apiToggleShoppingListItem(itemId, item.checked).catch((error) => {
+        console.error('Failed to update shopping list item', error);
+        setShoppingList((prev) => prev.map((i) => (i.id === itemId ? { ...i, checked: item.checked } : i)));
+      });
     };
 
     const clearCheckedShoppingListItems = () => {
-      setState((prev) => ({ ...prev, shoppingList: prev.shoppingList.filter((item) => !item.checked) }));
+      setShoppingList((prev) => prev.filter((item) => !item.checked));
+      apiClearCheckedShoppingListItems(currentUser.id).catch((error) => {
+        console.error('Failed to clear checked shopping list items', error);
+      });
     };
 
-    const addMadeThisPost = (recipeId: string, photoUri: string, note?: string) => {
-      setState((prev) => ({
-        ...prev,
-        recipes: prev.recipes.map((r) =>
-          r.id === recipeId
-            ? {
-                ...r,
-                madeThisPosts: [
-                  { id: `mt-${Date.now()}`, authorName: currentUser.name, photoUri, note },
-                  ...r.madeThisPosts,
-                ],
-              }
-            : r
-        ),
-      }));
+    const addMadeThisPost = async (recipeId: string, localPhotoUri: string, note?: string) => {
+      const photoUrl = await uploadPhoto(localPhotoUri, currentUser.id);
+      await apiAddMadeThisPost(recipeId, currentUser.id, photoUrl, note);
+      await refetch();
     };
 
     const addComment = (recipeId: string, text: string) => {
-      setState((prev) => ({
-        ...prev,
-        recipes: prev.recipes.map((r) =>
+      const optimisticId = `local-${Date.now()}`;
+      setRecipes((prev) =>
+        prev.map((r) =>
           r.id === recipeId
             ? {
                 ...r,
                 commentCount: r.commentCount + 1,
                 comments: [
                   ...r.comments,
-                  { id: `c-${Date.now()}`, authorName: currentUser.name, text, createdAt: new Date().toISOString() },
+                  { id: optimisticId, authorName: currentUser.name, text, createdAt: new Date().toISOString() },
                 ],
               }
             : r
-        ),
-      }));
+        )
+      );
+      apiAddComment(recipeId, currentUser.id, text).catch((error) => {
+        console.error('Failed to add comment', error);
+        setRecipes((prev) =>
+          prev.map((r) =>
+            r.id === recipeId
+              ? {
+                  ...r,
+                  commentCount: Math.max(r.commentCount - 1, 0),
+                  comments: r.comments.filter((c) => c.id !== optimisticId),
+                }
+              : r
+          )
+        );
+      });
     };
 
     return {
-      ...state,
+      recipes,
+      savedRecipeIds,
+      likedRecipeIds,
+      collections,
+      shoppingList,
+      followedAuthorIds,
       isLoaded,
       currentUser,
-      addRecipe,
-      updateRecipe,
+      saveRecipe,
       toggleSaveRecipe,
       toggleLikeRecipe,
       toggleFollowAuthor,
       createCollection,
-      addRecipeToCollection,
-      removeRecipeFromCollection,
       addRecipeIngredientsToShoppingList,
       toggleShoppingListItem,
       clearCheckedShoppingListItems,
       addMadeThisPost,
       addComment,
+      refetch,
     };
-  }, [state, isLoaded, currentUser]);
+  }, [
+    recipes,
+    savedRecipeIds,
+    likedRecipeIds,
+    collections,
+    shoppingList,
+    followedAuthorIds,
+    isLoaded,
+    currentUser,
+    refetch,
+  ]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }

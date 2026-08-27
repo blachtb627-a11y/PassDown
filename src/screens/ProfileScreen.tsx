@@ -1,10 +1,13 @@
-import React from 'react';
-import { FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
+import { fetchProfileWithCounts } from '../lib/api/social';
+import { fetchRecipesByAuthor } from '../lib/api/recipes';
+import { Author, Recipe } from '../types/recipe';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
 import { colors } from '../theme/colors';
@@ -14,11 +17,43 @@ export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute();
   const { recipes, followedAuthorIds, toggleFollowAuthor, currentUser } = useAppState();
-  const userId = (route.params as { userId?: string } | undefined)?.userId ?? currentUser.id;
+  const routeUserId = (route.params as { userId?: string } | undefined)?.userId;
+  const isOwnProfile = !routeUserId || routeUserId === currentUser.id;
+  const userId = isOwnProfile ? currentUser.id : routeUserId!;
 
-  const isOwnProfile = userId === currentUser.id;
-  const authoredRecipes = recipes.filter((r) => (isOwnProfile ? r.author.id === currentUser.id : r.author.id === userId));
-  const profileAuthor = isOwnProfile ? currentUser : authoredRecipes[0]?.author;
+  const [otherProfile, setOtherProfile] = useState<Author | null>(null);
+  const [otherRecipes, setOtherRecipes] = useState<Recipe[]>([]);
+  const [isLoadingOther, setIsLoadingOther] = useState(!isOwnProfile);
+
+  useEffect(() => {
+    if (isOwnProfile) return;
+    let cancelled = false;
+    setIsLoadingOther(true);
+    Promise.all([fetchProfileWithCounts(userId), fetchRecipesByAuthor(userId)])
+      .then(([profile, recs]) => {
+        if (cancelled) return;
+        setOtherProfile(profile);
+        setOtherRecipes(recs);
+      })
+      .catch((error) => console.error('Failed to load profile', error))
+      .finally(() => {
+        if (!cancelled) setIsLoadingOther(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwnProfile, userId]);
+
+  const profileAuthor = isOwnProfile ? currentUser : otherProfile;
+  const authoredRecipes = isOwnProfile ? recipes.filter((r) => r.author.id === currentUser.id) : otherRecipes;
+
+  if (!isOwnProfile && isLoadingOther) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
 
   if (!profileAuthor) {
     return <EmptyState icon="person-circle-outline" message="This profile couldn't be found." />;
@@ -113,6 +148,7 @@ export function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  centered: { alignItems: 'center', justifyContent: 'center' },
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   settingsButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },

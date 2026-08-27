@@ -16,7 +16,7 @@ import { IngredientsStep } from './IngredientsStep';
 import { StepsStep } from './StepsStep';
 import { DetailsStep } from './DetailsStep';
 import { ReviewStep } from './ReviewStep';
-import { emptyFormState, nextId, RecipeFormState, STEP_TITLES } from './formTypes';
+import { emptyFormState, RecipeFormState, STEP_TITLES } from './formTypes';
 
 function recipeToForm(recipe: Recipe): RecipeFormState {
   return {
@@ -39,11 +39,12 @@ function recipeToForm(recipe: Recipe): RecipeFormState {
 export function PostRecipeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'PostRecipe'>>();
-  const { recipes, addRecipe, updateRecipe, currentUser } = useAppState();
+  const { recipes, saveRecipe } = useAppState();
 
   const existingRecipe = route.params?.recipeId ? recipes.find((r) => r.id === route.params!.recipeId) : undefined;
   const [form, setForm] = useState<RecipeFormState>(existingRecipe ? recipeToForm(existingRecipe) : emptyFormState());
   const [stepIndex, setStepIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const patchForm = (patch: Partial<RecipeFormState>) => setForm((prev) => ({ ...prev, ...patch }));
 
@@ -62,43 +63,38 @@ export function PostRecipeScreen() {
     }
   };
 
-  const buildRecipe = (isDraft: boolean): Recipe => ({
-    id: existingRecipe?.id ?? nextId('recipe'),
-    title: form.title.trim() || 'Untitled Recipe',
-    story: form.story.trim() || undefined,
-    photos: form.photos,
-    author: existingRecipe?.author ?? currentUser,
-    ingredients: form.ingredients.filter((i) => i.item.trim()),
-    steps: form.steps.filter((s) => s.text.trim()),
-    prepMinutes: form.prepMinutes ? Number(form.prepMinutes) : undefined,
-    cookMinutes: form.cookMinutes ? Number(form.cookMinutes) : undefined,
-    servings: form.servings ? Number(form.servings) : undefined,
-    cuisine: form.cuisine.trim() || undefined,
-    mealType: form.mealType ?? undefined,
-    diet: form.diet ?? undefined,
-    difficulty: form.difficulty ?? undefined,
-    occasion: form.occasion ?? undefined,
-    likeCount: existingRecipe?.likeCount ?? 0,
-    commentCount: existingRecipe?.commentCount ?? 0,
-    comments: existingRecipe?.comments ?? [],
-    madeThisPosts: existingRecipe?.madeThisPosts ?? [],
-    isDraft,
-    createdAt: existingRecipe?.createdAt ?? new Date().toISOString(),
-  });
+  const handleSave = async (isDraft: boolean) => {
+    setIsSubmitting(true);
+    try {
+      const recipe = await saveRecipe({
+        id: existingRecipe?.id,
+        title: form.title.trim() || 'Untitled Recipe',
+        story: form.story.trim() || undefined,
+        photos: form.photos,
+        ingredients: form.ingredients.filter((i) => i.item.trim()),
+        steps: form.steps.filter((s) => s.text.trim()),
+        prepMinutes: form.prepMinutes ? Number(form.prepMinutes) : undefined,
+        cookMinutes: form.cookMinutes ? Number(form.cookMinutes) : undefined,
+        servings: form.servings ? Number(form.servings) : undefined,
+        cuisine: form.cuisine.trim() || undefined,
+        mealType: form.mealType ?? undefined,
+        diet: form.diet ?? undefined,
+        difficulty: form.difficulty ?? undefined,
+        occasion: form.occasion ?? undefined,
+        isDraft,
+      });
 
-  const saveRecipe = (isDraft: boolean) => {
-    const recipe = buildRecipe(isDraft);
-    if (existingRecipe) {
-      updateRecipe(recipe);
-    } else {
-      addRecipe(recipe);
-    }
-    if (isDraft) {
-      Alert.alert('Saved as Draft', 'Find it in your Profile to finish it later.');
-      navigation.goBack();
-    } else {
-      navigation.goBack();
-      navigation.navigate('RecipeDetail', { recipeId: recipe.id });
+      if (isDraft) {
+        Alert.alert('Saved as Draft', 'Find it in your Profile to finish it later.');
+        navigation.goBack();
+      } else {
+        navigation.goBack();
+        navigation.navigate('RecipeDetail', { recipeId: recipe.id });
+      }
+    } catch (error) {
+      Alert.alert('Something went wrong', 'Could not save your recipe. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -142,9 +138,19 @@ export function PostRecipeScreen() {
         <View style={styles.footer}>
           {isLastStep ? (
             <>
-              <PrimaryButton label="Post Recipe" icon="checkmark-circle-outline" onPress={() => saveRecipe(false)} />
+              <PrimaryButton
+                label="Post Recipe"
+                icon="checkmark-circle-outline"
+                loading={isSubmitting}
+                onPress={() => handleSave(false)}
+              />
               <View style={{ height: spacing.sm }} />
-              <PrimaryButton label="Save as Draft" variant="outline" onPress={() => saveRecipe(true)} />
+              <PrimaryButton
+                label="Save as Draft"
+                variant="outline"
+                disabled={isSubmitting}
+                onPress={() => handleSave(true)}
+              />
             </>
           ) : (
             <View style={styles.navRow}>
