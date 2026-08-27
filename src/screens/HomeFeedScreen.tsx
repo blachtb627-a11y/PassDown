@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RecipeCard } from '../components/RecipeCard';
+import { EmptyState } from '../components/EmptyState';
 import { useAppState } from '../context/AppStateContext';
 import { colors } from '../theme/colors';
 import { spacing, typography } from '../theme/typography';
@@ -23,6 +24,12 @@ export function HomeFeedScreen() {
         data={recipes.filter((r) => !r.isDraft)}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <EmptyState
+            icon="restaurant-outline"
+            message='No recipes yet — tap "Post" to share the first one!'
+          />
+        }
         renderItem={({ item }) => (
           <RecipeCard
             recipe={item}

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { mockRecipes } from '../data/mockRecipes';
 import { Author, Collection, Recipe, ShoppingListItem } from '../types/recipe';
 
 const STORAGE_KEY = 'passdown:app-state:v1';
@@ -9,8 +8,8 @@ export const currentUser: Author = {
   id: 'me',
   name: 'You',
   bio: 'Home cook sharing what I make.',
-  followerCount: 3,
-  followingCount: 2,
+  followerCount: 0,
+  followingCount: 0,
 };
 
 type PersistedState = {
@@ -28,7 +27,7 @@ const defaultCollections: Collection[] = [
 ];
 
 const defaultState: PersistedState = {
-  recipes: mockRecipes,
+  recipes: [],
   savedRecipeIds: [],
   likedRecipeIds: [],
   collections: defaultCollections,
