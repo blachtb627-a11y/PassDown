@@ -68,7 +68,11 @@ Deno.serve(async (req: Request) => {
         .select("id, full_name, username, created_at");
       if (profilesError) return json({ error: profilesError.message }, 500);
 
+      const { data: adminRows, error: adminsError } = await adminClient.from("admins").select("user_id");
+      if (adminsError) return json({ error: adminsError.message }, 500);
+
       const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+      const adminIds = new Set((adminRows ?? []).map((a) => a.user_id));
 
       const accounts = usersPage.users.map((u) => {
         const profile = profileById.get(u.id);
@@ -80,6 +84,7 @@ Deno.serve(async (req: Request) => {
           createdAt: u.created_at,
           lastSignInAt: u.last_sign_in_at ?? null,
           emailConfirmedAt: u.email_confirmed_at ?? null,
+          isAdmin: adminIds.has(u.id),
         };
       });
 
@@ -97,6 +102,33 @@ Deno.serve(async (req: Request) => {
 
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(targetUserId);
       if (deleteError) return json({ error: deleteError.message }, 500);
+
+      return json({ success: true });
+    }
+
+    if (action === "grant_admin") {
+      const targetUserId = body.userId;
+      if (!targetUserId || typeof targetUserId !== "string") {
+        return json({ error: "Missing userId" }, 400);
+      }
+
+      const { error: grantError } = await adminClient.from("admins").insert({ user_id: targetUserId });
+      if (grantError) return json({ error: grantError.message }, 500);
+
+      return json({ success: true });
+    }
+
+    if (action === "revoke_admin") {
+      const targetUserId = body.userId;
+      if (!targetUserId || typeof targetUserId !== "string") {
+        return json({ error: "Missing userId" }, 400);
+      }
+      if (targetUserId === userData.user.id) {
+        return json({ error: "You can't remove your own admin access from here." }, 400);
+      }
+
+      const { error: revokeError } = await adminClient.from("admins").delete().eq("user_id", targetUserId);
+      if (revokeError) return json({ error: revokeError.message }, 500);
 
       return json({ success: true });
     }

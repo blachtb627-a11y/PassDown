@@ -101,15 +101,19 @@ Every table has row-level security: published recipes and social data (comments,
 
 ## Admin portal
 
-A hidden "Admin Portal" entry appears in Settings for admin accounts only — it lists every signed-up account (email, name, username, join date, last active, email-verified status) and can delete an account entirely.
+A hidden "Admin Portal" entry appears in Settings for admin accounts only, with two tabs:
+
+- **Manage Accounts** — lists every signed-up account (email, name, username, join date, last active, email-verified status), and can delete an account, make another account an admin, or remove admin access from one.
+- **Ad Deployment** — a placeholder for now. Ad serving needs real decisions first (an ad network, placement, targeting) — the tab exists so the portal's shape is ready, but there's nothing to configure yet.
 
 There's no separate admin login — admin-ness is a permission on a normal account, not a different auth system. That's deliberate: a second parallel login for the same accounts would be more attack surface to secure without adding real protection.
 
-- **Who's an admin** lives in its own `public.admins` table (`supabase/migrations/..._add_admins_table.sql`), never a column on `profiles` — so there is no path for a user to grant themselves admin by updating their own profile. Granting admin is a manual one-time SQL statement run by whoever owns the Supabase project:
+- **Who's an admin** lives in its own `public.admins` table (`supabase/migrations/..._add_admins_table.sql`), never a column on `profiles` — so there is no path for a user to grant themselves admin by updating their own profile. The *first* admin has to be granted by hand, directly in Supabase's SQL Editor:
   ```sql
   insert into public.admins (user_id) values ('<user-uuid-here>');
   ```
-- **Listing every account's email and last-sign-in time, and deleting accounts,** both require Supabase's service-role key — which must never ship inside the app bundle. So this work happens in a Supabase Edge Function (`supabase/functions/admin-api/`), which itself checks the caller against the `admins` table (using the caller's own session, respecting RLS) *before* touching the service-role client. The app's `isCurrentUserAdmin()` check (`src/lib/api/admin.ts`) only gates the UI — the Edge Function is the real enforcement boundary.
+  After that, existing admins can promote or demote other accounts right from the Manage Accounts tab.
+- **Listing every account's email and last-sign-in time, deleting accounts, and granting/revoking admin** all require Supabase's service-role key — which must never ship inside the app bundle. So this work happens in a Supabase Edge Function (`supabase/functions/admin-api/`), which itself checks the caller against the `admins` table (using the caller's own session, respecting RLS) *before* touching the service-role client. The app's `isCurrentUserAdmin()` check (`src/lib/api/admin.ts`) only gates the UI — the Edge Function is the real enforcement boundary. An admin can't delete their own account or remove their own admin access from the portal, to avoid an accidental lockout.
 - Deleting a user cascades (via each table's `on delete cascade` foreign key) to their profile, recipes, comments, likes, saves, follows, and collections automatically.
 
 ## Next steps

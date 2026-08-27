@@ -8,6 +8,7 @@ export type AdminAccount = {
   createdAt: string;
   lastSignInAt: string | null;
   emailConfirmedAt: string | null;
+  isAdmin: boolean;
 };
 
 export async function isCurrentUserAdmin(): Promise<boolean> {
@@ -35,6 +36,22 @@ export async function fetchAllAccounts(): Promise<AdminAccount[]> {
 export async function deleteAccount(userId: string): Promise<void> {
   const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>('admin-api', {
     body: { action: 'delete', userId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
+export async function grantAdmin(userId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>('admin-api', {
+    body: { action: 'grant_admin', userId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
+export async function revokeAdmin(userId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>('admin-api', {
+    body: { action: 'revoke_admin', userId },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
