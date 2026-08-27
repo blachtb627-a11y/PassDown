@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
-import { useAppState, currentUser } from '../../context/AppStateContext';
+import { useAppState } from '../../context/AppStateContext';
 import { Recipe } from '../../types/recipe';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { colors } from '../../theme/colors';
@@ -39,7 +39,7 @@ function recipeToForm(recipe: Recipe): RecipeFormState {
 export function PostRecipeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'PostRecipe'>>();
-  const { recipes, addRecipe, updateRecipe } = useAppState();
+  const { recipes, addRecipe, updateRecipe, currentUser } = useAppState();
 
   const existingRecipe = route.params?.recipeId ? recipes.find((r) => r.id === route.params!.recipeId) : undefined;
   const [form, setForm] = useState<RecipeFormState>(existingRecipe ? recipeToForm(existingRecipe) : emptyFormState());

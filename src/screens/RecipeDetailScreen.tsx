@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { useAppState, currentUser } from '../context/AppStateContext';
+import { useAppState } from '../context/AppStateContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
 import { colors } from '../theme/colors';
@@ -38,6 +38,7 @@ export function RecipeDetailScreen() {
     toggleFollowAuthor,
     addRecipeIngredientsToShoppingList,
     addComment,
+    currentUser,
   } = useAppState();
 
   const recipe = recipes.find((r) => r.id === recipeId);

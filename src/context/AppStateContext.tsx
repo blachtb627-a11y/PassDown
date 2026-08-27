@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './AuthContext';
 import { Author, Collection, Recipe, ShoppingListItem } from '../types/recipe';
 
 const STORAGE_KEY = 'passdown:app-state:v1';
 
-export const currentUser: Author = {
-  id: 'me',
-  name: 'You',
-  bio: 'Home cook sharing what I make.',
+const GUEST_USER: Author = {
+  id: 'guest',
+  name: 'Guest',
+  bio: '',
   followerCount: 0,
   followingCount: 0,
 };
@@ -37,6 +38,7 @@ const defaultState: PersistedState = {
 
 type AppStateContextValue = PersistedState & {
   isLoaded: boolean;
+  currentUser: Author;
   addRecipe: (recipe: Recipe) => void;
   updateRecipe: (recipe: Recipe) => void;
   toggleSaveRecipe: (recipeId: string) => void;
@@ -59,8 +61,21 @@ function normalizeItemKey(item: string, unit: string) {
 }
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth();
   const [state, setState] = useState<PersistedState>(defaultState);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const currentUser: Author = useMemo(() => {
+    if (!session?.user) return GUEST_USER;
+    const fullName = (session.user.user_metadata as { full_name?: string } | undefined)?.full_name;
+    return {
+      id: session.user.id,
+      name: fullName?.trim() || session.user.email?.split('@')[0] || 'You',
+      bio: '',
+      followerCount: 0,
+      followingCount: 0,
+    };
+  }, [session]);
 
   useEffect(() => {
     (async () => {
@@ -238,6 +253,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     return {
       ...state,
       isLoaded,
+      currentUser,
       addRecipe,
       updateRecipe,
       toggleSaveRecipe,
@@ -252,7 +268,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       addMadeThisPost,
       addComment,
     };
-  }, [state, isLoaded]);
+  }, [state, isLoaded, currentUser]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }

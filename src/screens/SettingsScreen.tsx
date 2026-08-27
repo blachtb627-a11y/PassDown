@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { colors } from '../theme/colors';
 import { spacing, typography } from '../theme/typography';
 
@@ -20,6 +22,7 @@ function ToggleRow({ label, value, onValueChange }: ToggleRowProps) {
 }
 
 export function SettingsScreen() {
+  const { session, signOut } = useAuth();
   const [notifyFollowers, setNotifyFollowers] = useState(true);
   const [notifyLikesComments, setNotifyLikesComments] = useState(true);
   const [notifyMadeThis, setNotifyMadeThis] = useState(true);
@@ -35,7 +38,10 @@ export function SettingsScreen() {
         <ToggleRow label="Weekly digest" value={notifyDigest} onValueChange={setNotifyDigest} />
 
         <Text style={[typography.subtitle, styles.sectionSpacing]}>Account</Text>
-        <Text style={typography.body}>{'blachtb627@gmail.com'}</Text>
+        <Text style={typography.body}>{session?.user.email}</Text>
+        <View style={styles.signOutButton}>
+          <PrimaryButton label="Log Out" variant="outline" onPress={signOut} />
+        </View>
 
         <Text style={[typography.subtitle, styles.sectionSpacing]}>About</Text>
         <Text style={typography.body}>PassDown — an easy, warm place to share the recipes we cook for the people we love.</Text>
@@ -56,4 +62,5 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   sectionSpacing: { marginTop: spacing.xl, marginBottom: spacing.sm },
+  signOutButton: { marginTop: spacing.md },
 });

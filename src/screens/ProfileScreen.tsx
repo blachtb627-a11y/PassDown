@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { useAppState, currentUser } from '../context/AppStateContext';
+import { useAppState } from '../context/AppStateContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
 import { colors } from '../theme/colors';
@@ -13,8 +13,8 @@ import { radius, spacing, typography } from '../theme/typography';
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute();
+  const { recipes, followedAuthorIds, toggleFollowAuthor, currentUser } = useAppState();
   const userId = (route.params as { userId?: string } | undefined)?.userId ?? currentUser.id;
-  const { recipes, followedAuthorIds, toggleFollowAuthor } = useAppState();
 
   const isOwnProfile = userId === currentUser.id;
   const authoredRecipes = recipes.filter((r) => (isOwnProfile ? r.author.id === currentUser.id : r.author.id === userId));
