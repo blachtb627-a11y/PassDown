@@ -1,13 +1,13 @@
 // Expo's static web export (without expo-router) emits domain-root-absolute
-// asset paths ("/assets/...", "/_expo/...", "/favicon.ico"). That's correct for
-// a site served at a domain root, but GitHub Pages serves this project from
-// "https://<user>.github.io/PassDown/", a subpath — so every absolute path
-// needs the "/PassDown" prefix, or the browser looks for assets one level too
-// high and the page loads blank. This runs once after `expo export --platform web`.
+// asset paths ("/assets/...", "/_expo/...", "/favicon.ico"). That's correct when
+// the site is served from a domain's root — which is the case now that PassDown
+// has its own custom domain (passdown.it.com) instead of living under the
+// "/PassDown/" subpath GitHub Pages used for the old github.io project URL.
+// BASE_PATH stays here (empty by default) in case that ever changes again.
 const fs = require('fs');
 const path = require('path');
 
-const BASE_PATH = '/PassDown';
+const BASE_PATH = '';
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 
 function rewriteFile(filePath, replacements) {
@@ -18,16 +18,19 @@ function rewriteFile(filePath, replacements) {
   fs.writeFileSync(filePath, content);
 }
 
-const indexHtmlPath = path.join(DIST_DIR, 'index.html');
-rewriteFile(indexHtmlPath, [
-  [/href="\/favicon\.ico"/g, `href="${BASE_PATH}/favicon.ico"`],
-  [/src="\/_expo\//g, `src="${BASE_PATH}/_expo/`],
-]);
+if (BASE_PATH) {
+  const indexHtmlPath = path.join(DIST_DIR, 'index.html');
+  rewriteFile(indexHtmlPath, [
+    [/href="\/favicon\.ico"/g, `href="${BASE_PATH}/favicon.ico"`],
+    [/src="\/_expo\//g, `src="${BASE_PATH}/_expo/`],
+  ]);
 
-const jsDir = path.join(DIST_DIR, '_expo', 'static', 'js', 'web');
-for (const file of fs.readdirSync(jsDir)) {
-  if (!file.endsWith('.js')) continue;
-  rewriteFile(path.join(jsDir, file), [[/"\/assets\//g, `"${BASE_PATH}/assets/`]]);
+  const jsDir = path.join(DIST_DIR, '_expo', 'static', 'js', 'web');
+  for (const file of fs.readdirSync(jsDir)) {
+    if (!file.endsWith('.js')) continue;
+    rewriteFile(path.join(jsDir, file), [[/"\/assets\//g, `"${BASE_PATH}/assets/`]]);
+  }
+  console.log(`Rewrote dist/ asset paths for base path "${BASE_PATH}".`);
+} else {
+  console.log('BASE_PATH is empty — dist/ already uses domain-root paths, nothing to rewrite.');
 }
-
-console.log(`Rewrote dist/ asset paths for base path "${BASE_PATH}".`);

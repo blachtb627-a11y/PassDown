@@ -29,6 +29,10 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      # Keeps the custom domain configured across every Actions-based deploy —
+      # without this file in the published output, GitHub Pages can silently
+      # drop the custom domain setting on the next deploy.
+      - run: echo "passdown.it.com" > dist/CNAME
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

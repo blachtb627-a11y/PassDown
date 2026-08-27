@@ -73,15 +73,19 @@ Requires the Expo Go app on a phone, or an iOS/Android simulator, to actually se
 
 ## Web preview
 
-PassDown is a phone app at heart, but it also runs in a browser via `react-native-web` — useful for a quick look without installing anything. A GitHub Actions workflow (`.github/workflows/deploy-web.yml`) rebuilds and republishes it to GitHub Pages on every push.
-
-**One-time setup** (repo owner, ~30 seconds): go to this repo's **Settings → Pages**, and under "Build and deployment" set **Source** to **GitHub Actions**. After that, the site is live at:
+PassDown is a phone app at heart, but it also runs in a browser via `react-native-web` — useful for a quick look without installing anything. A GitHub Actions workflow (`.github/workflows/deploy-web.yml`) rebuilds and republishes it to GitHub Pages on every push, live at:
 
 ```
-https://blachtb627-a11y.github.io/PassDown/
+https://passdown.it.com
 ```
 
-and stays up to date automatically as this branch is pushed. A few phone-only bits (camera capture, keep-screen-awake in Cook Mode) fall back to browser equivalents or no-ops on web — the mobile app is the real target.
+(the old `https://blachtb627-a11y.github.io/PassDown/` URL now redirects there). A few phone-only bits (camera capture, keep-screen-awake in Cook Mode) fall back to browser equivalents or no-ops on web — the mobile app is the real target.
+
+**Custom domain setup**, for reference (already done for `passdown.it.com`):
+
+1. At the domain's DNS provider, point it at GitHub Pages — for an apex/root domain like this one, four `A` records at the root (`@`) to `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, and `185.199.111.153`. (A `www` subdomain instead would use a `CNAME` to `blachtb627-a11y.github.io`.)
+2. In this repo's **Settings → Pages**, set **Custom domain** to `passdown.it.com` and save — GitHub verifies DNS and provisions HTTPS automatically (can take a few minutes up to a couple hours). Once verified, check **Enforce HTTPS**.
+3. The deploy workflow writes a `CNAME` file into the build output on every run so this setting survives future Actions-based deploys.
 
 ## Data model
 
