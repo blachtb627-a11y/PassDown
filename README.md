@@ -58,6 +58,18 @@ npm run ios      # or: npm run android / npm run web
 
 Requires the Expo Go app on a phone, or an iOS/Android simulator, to actually see it running.
 
+## Web preview
+
+PassDown is a phone app at heart, but it also runs in a browser via `react-native-web` — useful for a quick look without installing anything. A GitHub Actions workflow (`.github/workflows/deploy-web.yml`) rebuilds and republishes it to GitHub Pages on every push.
+
+**One-time setup** (repo owner, ~30 seconds): go to this repo's **Settings → Pages**, and under "Build and deployment" set **Source** to **GitHub Actions**. After that, the site is live at:
+
+```
+https://blachtb627-a11y.github.io/PassDown/
+```
+
+and stays up to date automatically as this branch is pushed. A few phone-only bits (camera capture, keep-screen-awake in Cook Mode) fall back to browser equivalents or no-ops on web — the mobile app is the real target.
+
 ## Next steps
 
 The brief's [open questions](#) (private/family sharing, remix attribution, feed algorithm balance, voice control in Cook Mode, and the least-friction sign-up method) are still open — worth resolving before the following:
