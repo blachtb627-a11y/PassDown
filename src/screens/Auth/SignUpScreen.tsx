@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,8 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import { isUsernameTaken } from '../../lib/api/social';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { PasswordInput } from '../../components/PasswordInput';
-import { colors } from '../../theme/colors';
-import { radius, spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../../theme/typography';
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 
@@ -17,6 +18,8 @@ type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 export function SignUpScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signUp } = useAuth();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
@@ -156,24 +159,26 @@ export function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  content: { padding: spacing.md },
-  logoMark: { width: 64, height: 64, alignSelf: 'center', marginBottom: spacing.md },
-  helper: { color: colors.textMuted, marginVertical: spacing.md },
-  label: { marginTop: spacing.lg, marginBottom: spacing.xs },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...typography.body,
-  },
-  usernameStatus: { marginTop: spacing.xs, color: colors.textMuted },
-  usernameAvailable: { color: colors.success },
-  usernameTaken: { color: colors.danger },
-  error: { color: colors.danger, marginTop: spacing.md },
-  buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    content: { padding: spacing.md },
+    logoMark: { width: 64, height: 64, alignSelf: 'center', marginBottom: spacing.md },
+    helper: { color: colors.textMuted, marginVertical: spacing.md },
+    label: { marginTop: spacing.lg, marginBottom: spacing.xs },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...typography.body,
+    },
+    usernameStatus: { marginTop: spacing.xs, color: colors.textMuted },
+    usernameAvailable: { color: colors.success },
+    usernameTaken: { color: colors.danger },
+    error: { color: colors.danger, marginTop: spacing.md },
+    buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
+  });
+}

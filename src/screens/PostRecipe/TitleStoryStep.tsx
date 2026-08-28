@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput } from 'react-native';
-import { colors } from '../../theme/colors';
-import { radius, spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../../theme/typography';
 
 type Props = {
   title: string;
@@ -11,6 +12,9 @@ type Props = {
 };
 
 export function TitleStoryStep({ title, story, onChangeTitle, onChangeStory }: Props) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={typography.title}>What's it called?</Text>
@@ -37,16 +41,18 @@ export function TitleStoryStep({ title, story, onChangeTitle, onChangeStory }: P
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.md },
-  label: { marginTop: spacing.lg, marginBottom: spacing.xs },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...typography.body,
-  },
-  multiline: { minHeight: 120, textAlignVertical: 'top' },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: { padding: spacing.md },
+    label: { marginTop: spacing.lg, marginBottom: spacing.xs },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...typography.body,
+    },
+    multiline: { minHeight: 120, textAlignVertical: 'top' },
+  });
+}

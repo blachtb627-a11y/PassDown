@@ -19,8 +19,9 @@ import { useAppState } from '../context/AppStateContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
 import { confirm, notify } from '../lib/alert';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../theme/typography';
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +29,8 @@ export function RecipeDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'RecipeDetail'>>();
   const { recipeId, focusComments } = route.params;
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const {
     recipes,
     savedRecipeIds,
@@ -301,7 +304,8 @@ export function RecipeDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { paddingBottom: spacing.xxl },
   heroPhoto: { width, height: width, backgroundColor: colors.border },
@@ -372,4 +376,5 @@ const styles = StyleSheet.create({
   },
   madeThisPhoto: { width: 56, height: 56, borderRadius: radius.sm, backgroundColor: colors.border },
   commentRow: { marginTop: spacing.md },
-});
+  });
+}

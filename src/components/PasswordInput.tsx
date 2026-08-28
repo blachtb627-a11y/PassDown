@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../theme/typography';
 
 type Props = {
   value: string;
@@ -18,6 +19,8 @@ type Props = {
 // crowding the field with extra text.
 export function PasswordInput({ value, onChangeText, placeholder, textContentType }: Props) {
   const [isVisible, setIsVisible] = useState(false);
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
   return (
     <View style={styles.container}>
@@ -45,25 +48,27 @@ export function PasswordInput({ value, onChangeText, placeholder, textContentTyp
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-  },
-  input: {
-    flex: 1,
-    padding: spacing.md,
-    ...typography.body,
-  },
-  toggle: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      backgroundColor: colors.surface,
+    },
+    input: {
+      flex: 1,
+      padding: spacing.md,
+      ...typography.body,
+    },
+    toggle: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.sm,
+    },
+  });
+}

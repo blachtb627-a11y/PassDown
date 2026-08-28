@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -6,13 +6,16 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RecipeCard } from '../components/RecipeCard';
 import { EmptyState } from '../components/EmptyState';
 import { useAppState } from '../context/AppStateContext';
-import { colors } from '../theme/colors';
-import { spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing } from '../theme/typography';
 import { RootStackParamList } from '../navigation/types';
 
 export function HomeFeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { recipes, savedRecipeIds, likedRecipeIds, toggleSaveRecipe, toggleLikeRecipe } = useAppState();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,22 +55,24 @@ export function HomeFeedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  logoMark: { width: 32, height: 32 },
-  listContent: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
-  },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+    },
+    brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    logoMark: { width: 32, height: 32 },
+    listContent: {
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xl,
+    },
+  });
+}

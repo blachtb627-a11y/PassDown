@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Step } from '../../types/recipe';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors } from '../../theme/colors';
-import { radius, spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../../theme/typography';
 import { emptyStep } from './formTypes';
 import { notify } from '../../lib/alert';
 
@@ -15,6 +16,8 @@ type Props = {
 };
 
 export function StepsStep({ steps, onChange }: Props) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const updateStep = (id: string, patch: Partial<Step>) => {
     onChange(steps.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   };
@@ -86,24 +89,26 @@ export function StepsStep({ steps, onChange }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.md },
-  helper: { color: colors.textMuted, marginBottom: spacing.lg },
-  stepCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  stepHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  input: {
-    ...typography.body,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  stepPhoto: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.sm, marginTop: spacing.sm },
-  addPhotoRow: { flexDirection: 'row', alignItems: 'center', minHeight: 44, marginTop: spacing.xs },
-  addButtonWrapper: { marginTop: spacing.sm },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: { padding: spacing.md },
+    helper: { color: colors.textMuted, marginBottom: spacing.lg },
+    stepCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      backgroundColor: colors.surface,
+    },
+    stepHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+    input: {
+      ...typography.body,
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    stepPhoto: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.sm, marginTop: spacing.sm },
+    addPhotoRow: { flexDirection: 'row', alignItems: 'center', minHeight: 44, marginTop: spacing.xs },
+    addButtonWrapper: { marginTop: spacing.sm },
+  });
+}

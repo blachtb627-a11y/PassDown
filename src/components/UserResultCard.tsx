@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Author } from '../types/recipe';
 import { PrimaryButton } from './PrimaryButton';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme/typography';
 
 type Props = {
   user: Author;
@@ -13,6 +14,9 @@ type Props = {
 };
 
 export function UserResultCard({ user, isFollowing, onToggleFollow, onPress }: Props) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable style={styles.card} onPress={onPress} accessibilityRole="button" accessibilityLabel={user.name}>
       <Image source={{ uri: user.avatarUri ?? 'https://picsum.photos/seed/user-avatar/200' }} style={styles.avatar} />
@@ -43,19 +47,21 @@ export function UserResultCard({ user, isFollowing, onToggleFollow, onPress }: P
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border },
-  info: { flex: 1 },
-  followButton: { minWidth: 96 },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border },
+    info: { flex: 1 },
+    followButton: { minWidth: 96 },
+  });
+}

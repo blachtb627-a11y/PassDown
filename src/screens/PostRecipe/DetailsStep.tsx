@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Diet, Difficulty, MealType, Occasion } from '../../types/recipe';
 import { FilterChip } from '../../components/FilterChip';
-import { colors } from '../../theme/colors';
-import { radius, spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../../theme/typography';
 
 const MEAL_TYPES: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Drink'];
 const DIETS: Diet[] = ['None', 'Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free'];
@@ -45,6 +46,8 @@ export function DetailsStep({
   isPrivate,
   onChange,
 }: Props) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={typography.title}>A few details</Text>
@@ -126,22 +129,24 @@ export function DetailsStep({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.md },
-  helper: { color: colors.textMuted, marginBottom: spacing.lg },
-  timeRow: { flexDirection: 'row', gap: spacing.sm },
-  timeField: { flex: 1 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    minHeight: 48,
-    backgroundColor: colors.surface,
-    marginTop: spacing.xs,
-    ...typography.body,
-  },
-  fullInput: { marginBottom: spacing.md },
-  label: { marginTop: spacing.lg, marginBottom: spacing.xs },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap' },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: { padding: spacing.md },
+    helper: { color: colors.textMuted, marginBottom: spacing.lg },
+    timeRow: { flexDirection: 'row', gap: spacing.sm },
+    timeField: { flex: 1 },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.sm,
+      minHeight: 48,
+      backgroundColor: colors.surface,
+      marginTop: spacing.xs,
+      ...typography.body,
+    },
+    fullInput: { marginBottom: spacing.md },
+    label: { marginTop: spacing.lg, marginBottom: spacing.xs },
+    chipsRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  });
+}

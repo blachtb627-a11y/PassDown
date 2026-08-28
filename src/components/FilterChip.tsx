@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme/typography';
 
 type Props = {
   label: string;
@@ -10,6 +11,9 @@ type Props = {
 };
 
 export function FilterChip({ label, selected, onPress }: Props) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable
       onPress={onPress}
@@ -23,19 +27,21 @@ export function FilterChip({ label, selected, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  chip: {
-    paddingHorizontal: spacing.md,
-    minHeight: 44,
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.secondary,
-    marginRight: spacing.sm,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: {
-    backgroundColor: colors.secondary,
-  },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    chip: {
+      paddingHorizontal: spacing.md,
+      minHeight: 44,
+      justifyContent: 'center',
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.secondary,
+      marginRight: spacing.sm,
+      marginBottom: spacing.sm,
+      backgroundColor: colors.surface,
+    },
+    chipSelected: {
+      backgroundColor: colors.secondary,
+    },
+  });
+}

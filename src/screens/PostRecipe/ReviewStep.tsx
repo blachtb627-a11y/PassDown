@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RecipeFormState } from './formTypes';
-import { colors } from '../../theme/colors';
-import { radius, spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../../theme/typography';
 
 export function ReviewStep({ form }: { form: RecipeFormState }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const totalTime = (Number(form.prepMinutes) || 0) + (Number(form.cookMinutes) || 0);
 
   return (
@@ -63,16 +66,18 @@ export function ReviewStep({ form }: { form: RecipeFormState }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.md },
-  helper: { color: colors.textMuted, marginBottom: spacing.md },
-  heroPhoto: { width: '100%', aspectRatio: 4 / 5, borderRadius: radius.md, backgroundColor: colors.border },
-  visibilityRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
-  recipeTitle: { marginTop: spacing.md },
-  story: { fontStyle: 'italic', marginTop: spacing.xs },
-  statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm, flexWrap: 'wrap' },
-  sectionTitle: { marginTop: spacing.lg, marginBottom: spacing.xs },
-  step: { marginBottom: spacing.xs },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.lg },
-  tag: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: { padding: spacing.md },
+    helper: { color: colors.textMuted, marginBottom: spacing.md },
+    heroPhoto: { width: '100%', aspectRatio: 4 / 5, borderRadius: radius.md, backgroundColor: colors.border },
+    visibilityRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
+    recipeTitle: { marginTop: spacing.md },
+    story: { fontStyle: 'italic', marginTop: spacing.xs },
+    statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm, flexWrap: 'wrap' },
+    sectionTitle: { marginTop: spacing.lg, marginBottom: spacing.xs },
+    step: { marginBottom: spacing.xs },
+    tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.lg },
+    tag: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -10,13 +10,16 @@ import { fetchRecipesByAuthor } from '../lib/api/recipes';
 import { Author, Recipe } from '../types/recipe';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme/typography';
 
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute();
   const { recipes, followedAuthorIds, toggleFollowAuthor, currentUser } = useAppState();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const routeUserId = (route.params as { userId?: string } | undefined)?.userId;
   const isOwnProfile = !routeUserId || routeUserId === currentUser.id;
   const userId = isOwnProfile ? currentUser.id : routeUserId!;
@@ -168,16 +171,18 @@ export function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centered: { alignItems: 'center', justifyContent: 'center' },
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  settingsButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
-  profileRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, alignItems: 'center' },
-  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.border },
-  countsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
-  recipesLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
-  gridItem: { flex: 1, gap: spacing.xs },
-  gridPhoto: { width: '100%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: colors.border },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    centered: { alignItems: 'center', justifyContent: 'center' },
+    header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    settingsButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+    profileRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, alignItems: 'center' },
+    avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.border },
+    countsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
+    recipesLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
+    gridItem: { flex: 1, gap: spacing.xs },
+    gridPhoto: { width: '100%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: colors.border },
+  });
+}

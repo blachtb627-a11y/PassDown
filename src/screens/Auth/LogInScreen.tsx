@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,12 +6,15 @@ import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { PasswordInput } from '../../components/PasswordInput';
-import { colors } from '../../theme/colors';
-import { radius, spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../../theme/typography';
 
 export function LogInScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signIn } = useAuth();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,22 +77,24 @@ export function LogInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  content: { padding: spacing.md },
-  logoMark: { width: 64, height: 64, alignSelf: 'center', marginBottom: spacing.md },
-  label: { marginTop: spacing.lg, marginBottom: spacing.xs },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...typography.body,
-  },
-  error: { color: colors.danger, marginTop: spacing.md },
-  buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
-  forgotPassword: { marginTop: spacing.sm, alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
-  forgotPasswordText: { color: colors.secondary },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    content: { padding: spacing.md },
+    logoMark: { width: 64, height: 64, alignSelf: 'center', marginBottom: spacing.md },
+    label: { marginTop: spacing.lg, marginBottom: spacing.xs },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...typography.body,
+    },
+    error: { color: colors.danger, marginTop: spacing.md },
+    buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
+    forgotPassword: { marginTop: spacing.sm, alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
+    forgotPasswordText: { color: colors.secondary },
+  });
+}

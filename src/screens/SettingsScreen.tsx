@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,12 +6,15 @@ import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { isCurrentUserAdmin } from '../lib/api/admin';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { colors } from '../theme/colors';
-import { spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { AppTypography, spacing } from '../theme/typography';
 
 type ToggleRowProps = { label: string; value: boolean; onValueChange: (v: boolean) => void };
 
 function ToggleRow({ label, value, onValueChange }: ToggleRowProps) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   return (
     <View style={styles.row}>
       <Text style={typography.body}>{label}</Text>
@@ -28,6 +31,8 @@ function ToggleRow({ label, value, onValueChange }: ToggleRowProps) {
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { session, signOut } = useAuth();
+  const { colors, typography, isDark, toggleTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [notifyFollowers, setNotifyFollowers] = useState(true);
   const [notifyLikesComments, setNotifyLikesComments] = useState(true);
   const [notifyMadeThis, setNotifyMadeThis] = useState(true);
@@ -41,7 +46,10 @@ export function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={typography.subtitle}>Notifications</Text>
+        <Text style={typography.subtitle}>Appearance</Text>
+        <ToggleRow label="Dark mode" value={isDark} onValueChange={toggleTheme} />
+
+        <Text style={[typography.subtitle, styles.sectionSpacing]}>Notifications</Text>
         <ToggleRow label="New followers" value={notifyFollowers} onValueChange={setNotifyFollowers} />
         <ToggleRow label="Likes & comments" value={notifyLikesComments} onValueChange={setNotifyLikesComments} />
         <ToggleRow label='"I made this!" posts' value={notifyMadeThis} onValueChange={setNotifyMadeThis} />
@@ -72,17 +80,19 @@ export function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  sectionSpacing: { marginTop: spacing.xl, marginBottom: spacing.sm },
-  signOutButton: { marginTop: spacing.md },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { padding: spacing.md },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      minHeight: 48,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sectionSpacing: { marginTop: spacing.xl, marginBottom: spacing.sm },
+    signOutButton: { marginTop: spacing.md },
+  });
+}

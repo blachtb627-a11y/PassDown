@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -20,8 +20,9 @@ import { useAppState } from '../context/AppStateContext';
 import { isUsernameTaken } from '../lib/api/social';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { notify } from '../lib/alert';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../theme/typography';
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 
@@ -30,6 +31,8 @@ type UsernameStatus = 'idle' | 'unchanged' | 'checking' | 'available' | 'taken' 
 export function EditProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { currentUser, updateProfile } = useAppState();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
   const [fullName, setFullName] = useState(currentUser.name);
   const [username, setUsername] = useState(currentUser.username);
@@ -177,38 +180,40 @@ export function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  content: { padding: spacing.md, alignItems: 'stretch' },
-  avatarWrapper: { alignSelf: 'center', marginTop: spacing.md },
-  avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.border },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.background,
-  },
-  avatarHint: { alignSelf: 'center', marginTop: spacing.xs, color: colors.textMuted },
-  label: { marginTop: spacing.lg, marginBottom: spacing.xs },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...typography.body,
-  },
-  bioInput: { minHeight: 100, textAlignVertical: 'top' },
-  usernameStatus: { marginTop: spacing.xs, color: colors.textMuted },
-  usernameAvailable: { color: colors.success },
-  usernameTaken: { color: colors.danger },
-  buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    content: { padding: spacing.md, alignItems: 'stretch' },
+    avatarWrapper: { alignSelf: 'center', marginTop: spacing.md },
+    avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.border },
+    avatarBadge: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: colors.background,
+    },
+    avatarHint: { alignSelf: 'center', marginTop: spacing.xs, color: colors.textMuted },
+    label: { marginTop: spacing.lg, marginBottom: spacing.xs },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...typography.body,
+    },
+    bioInput: { minHeight: 100, textAlignVertical: 'top' },
+    usernameStatus: { marginTop: spacing.xs, color: colors.textMuted },
+    usernameAvailable: { color: colors.success },
+    usernameTaken: { color: colors.danger },
+    buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
+  });
+}

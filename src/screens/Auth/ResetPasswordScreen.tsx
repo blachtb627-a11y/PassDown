@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { PasswordInput } from '../../components/PasswordInput';
-import { colors } from '../../theme/colors';
-import { spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { spacing } from '../../theme/typography';
 
 // Shown instead of the normal signed-in app whenever AuthContext reports
 // isPasswordRecovery — the session at this point came from a password-reset
@@ -12,6 +13,8 @@ import { spacing, typography } from '../../theme/typography';
 // out via Cancel) before going any further.
 export function ResetPasswordScreen() {
   const { updatePassword, signOut } = useAuth();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,12 +69,14 @@ export function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  content: { padding: spacing.md },
-  helper: { color: colors.textMuted, marginVertical: spacing.md },
-  label: { marginTop: spacing.lg, marginBottom: spacing.xs },
-  error: { color: colors.danger, marginTop: spacing.md },
-  buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    content: { padding: spacing.md },
+    helper: { color: colors.textMuted, marginVertical: spacing.md },
+    label: { marginTop: spacing.lg, marginBottom: spacing.xs },
+    error: { color: colors.danger, marginTop: spacing.md },
+    buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
+  });
+}

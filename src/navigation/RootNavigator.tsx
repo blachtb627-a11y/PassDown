@@ -17,12 +17,13 @@ import { FollowListScreen } from '../screens/FollowListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AdminPortalScreen } from '../screens/AdminPortalScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
   const { session, isPasswordRecovery } = useAuth();
+  const { colors } = useTheme();
 
   return (
     <Stack.Navigator

@@ -12,8 +12,9 @@ import { FilterChip } from '../components/FilterChip';
 import { CategoryTile } from '../components/CategoryTile';
 import { UserResultCard } from '../components/UserResultCard';
 import { EmptyState } from '../components/EmptyState';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../theme/typography';
 import { Author, MealType } from '../types/recipe';
 
 const MEAL_TYPES: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Drink'];
@@ -22,6 +23,8 @@ type SearchMode = 'recipes' | 'people';
 function PeopleSearch() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { currentUser, followedAuthorIds, toggleFollowAuthor } = useAppState();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [results, setResults] = useState<Author[]>([]);
@@ -97,6 +100,8 @@ function PeopleSearch() {
 export function SearchScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { recipes, savedRecipeIds, likedRecipeIds, toggleSaveRecipe, toggleLikeRecipe } = useAppState();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [mode, setMode] = useState<SearchMode>('recipes');
   const [query, setQuery] = useState('');
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
@@ -195,7 +200,8 @@ export function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   modeRow: { flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.md, gap: spacing.xs },
   peopleList: { paddingHorizontal: spacing.md, paddingBottom: spacing.xl },
@@ -222,4 +228,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.md,
   },
-});
+  });
+}

@@ -37,6 +37,8 @@ Ease-of-use and accessibility principles from sections 6 & 11 are applied throug
 
 Colors, type scale, and spacing live in `src/theme/` and follow the brief's starting palette (warm terracotta primary, deep herb green secondary, cream background, charcoal text) — centralized there so a brand refresh only touches one place.
 
+**Dark mode** — a toggle in Settings ("Appearance") switches the whole app between the light palette and a warm dark one (near-black background, brand colors nudged brighter for contrast), persisted across launches via AsyncStorage. `src/theme/ThemeContext.tsx`'s `useTheme()` hook provides the active `colors` and `typography` to every screen; every screen builds its `StyleSheet` from those (memoized on the current theme) instead of importing static color constants, so the switch actually repaints everything — text, backgrounds, borders, the navigation header — rather than just a subset.
+
 **Logo**: a rounded pin badge holding a heart-and-fork mark (`assets/logo.png`) — terracotta ring, cream fill, gold heart, olive fork, matching the palette above exactly (`colors.accentGold`/`colors.accentOlive`). It's the app icon, favicon, Android adaptive/monochrome icon, and appears in-app on the Welcome, Sign Up, and Log In screens and the Home feed header. It was recreated as flat vector shapes (rendered to PNG at build time) from the reference logo image rather than imported as a binary file, since this environment can't save a pasted image straight to disk — regenerate or tweak it by editing the SVG-building script and re-rendering (a headless-browser screenshot of an HTML/SVG page) rather than hand-editing pixels.
 
 ## Project structure

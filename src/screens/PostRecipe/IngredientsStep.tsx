@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../../types/recipe';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors } from '../../theme/colors';
-import { radius, spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { AppTypography, radius, spacing } from '../../theme/typography';
 import { emptyIngredient } from './formTypes';
 
 type Props = {
@@ -13,6 +14,8 @@ type Props = {
 };
 
 export function IngredientsStep({ ingredients, onChange }: Props) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const updateIngredient = (id: string, patch: Partial<Ingredient>) => {
     onChange(ingredients.map((ing) => (ing.id === id ? { ...ing, ...patch } : ing)));
   };
@@ -91,31 +94,33 @@ export function IngredientsStep({ ingredients, onChange }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.md },
-  helper: { color: colors.textMuted, marginBottom: spacing.lg },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  fieldLabel: { color: colors.textMuted, marginBottom: spacing.xs },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    minHeight: 48,
-    backgroundColor: colors.background,
-    ...typography.body,
-  },
-  quantityInput: { flex: 1 },
-  unitInput: { flex: 1 },
-  removeButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  addButtonWrapper: { marginTop: spacing.md },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    container: { padding: spacing.md },
+    helper: { color: colors.textMuted, marginBottom: spacing.lg },
+    card: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      backgroundColor: colors.surface,
+    },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+    row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+    fieldLabel: { color: colors.textMuted, marginBottom: spacing.xs },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.sm,
+      minHeight: 48,
+      backgroundColor: colors.background,
+      ...typography.body,
+    },
+    quantityInput: { flex: 1 },
+    unitInput: { flex: 1 },
+    removeButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+    addButtonWrapper: { marginTop: spacing.md },
+  });
+}

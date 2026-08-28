@@ -1,16 +1,22 @@
-import { colors } from './colors';
+import { AppColors } from './colors';
 
 // Minimum 16pt body text per the brief's ease-of-use & accessibility guidelines (sections 6, 11).
 // System scaling (Dynamic Type / font scale) is left on — we never disable allowFontScaling.
-export const typography = {
-  display: { fontSize: 32, fontWeight: '700' as const, color: colors.secondary },
-  title: { fontSize: 24, fontWeight: '700' as const, color: colors.text },
-  subtitle: { fontSize: 18, fontWeight: '600' as const, color: colors.text },
-  body: { fontSize: 16, fontWeight: '400' as const, color: colors.text },
-  bodyBold: { fontSize: 16, fontWeight: '600' as const, color: colors.text },
-  meta: { fontSize: 14, fontWeight: '400' as const, color: colors.textMuted },
-  button: { fontSize: 16, fontWeight: '700' as const, color: colors.white },
-};
+// A function (not a static object) because text color depends on the active theme (light/dark) —
+// see ThemeContext, which calls this whenever the theme changes.
+export function getTypography(colors: AppColors) {
+  return {
+    display: { fontSize: 32, fontWeight: '700' as const, color: colors.secondary },
+    title: { fontSize: 24, fontWeight: '700' as const, color: colors.text },
+    subtitle: { fontSize: 18, fontWeight: '600' as const, color: colors.text },
+    body: { fontSize: 16, fontWeight: '400' as const, color: colors.text },
+    bodyBold: { fontSize: 16, fontWeight: '600' as const, color: colors.text },
+    meta: { fontSize: 14, fontWeight: '400' as const, color: colors.textMuted },
+    button: { fontSize: 16, fontWeight: '700' as const, color: colors.white },
+  };
+}
+
+export type AppTypography = ReturnType<typeof getTypography>;
 
 export const spacing = {
   xs: 4,

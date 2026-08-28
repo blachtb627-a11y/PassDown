@@ -1,8 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme/typography';
 
 type Props = {
   label: string;
@@ -25,6 +25,7 @@ export function PrimaryButton({
   loading,
   fullWidth = true,
 }: Props) {
+  const { colors, typography } = useTheme();
   const backgroundColor =
     variant === 'primary' ? colors.primary : variant === 'secondary' ? colors.secondary : 'transparent';
   const textColor = variant === 'outline' ? colors.secondary : colors.white;

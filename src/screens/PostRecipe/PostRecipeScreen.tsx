@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -8,8 +8,9 @@ import { useAppState } from '../../context/AppStateContext';
 import { Recipe } from '../../types/recipe';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { notify } from '../../lib/alert';
-import { colors } from '../../theme/colors';
-import { spacing, typography } from '../../theme/typography';
+import { AppColors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { spacing } from '../../theme/typography';
 import { ProgressBar } from './ProgressBar';
 import { PhotoStep } from './PhotoStep';
 import { TitleStoryStep } from './TitleStoryStep';
@@ -42,6 +43,8 @@ export function PostRecipeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'PostRecipe'>>();
   const { recipes, saveRecipe } = useAppState();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const existingRecipe = route.params?.recipeId ? recipes.find((r) => r.id === route.params!.recipeId) : undefined;
   const [form, setForm] = useState<RecipeFormState>(existingRecipe ? recipeToForm(existingRecipe) : emptyFormState());
@@ -194,11 +197,13 @@ export function PostRecipeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  footer: { padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  hint: { color: colors.textMuted, marginBottom: spacing.sm, textAlign: 'center' },
-  navRow: { flexDirection: 'row', gap: spacing.sm },
-  navButtonWrapper: { flex: 1 },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    footer: { padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+    hint: { color: colors.textMuted, marginBottom: spacing.sm, textAlign: 'center' },
+    navRow: { flexDirection: 'row', gap: spacing.sm },
+    navButtonWrapper: { flex: 1 },
+  });
+}

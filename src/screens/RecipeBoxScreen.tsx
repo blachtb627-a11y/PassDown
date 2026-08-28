@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Platform, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -7,14 +7,17 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
 import { EmptyState } from '../components/EmptyState';
 import { FilterChip } from '../components/FilterChip';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme/typography';
 
 const ALL_SAVED = 'all-saved';
 
 export function RecipeBoxScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { recipes, savedRecipeIds, collections, createCollection } = useAppState();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeCollectionId, setActiveCollectionId] = useState<string>(ALL_SAVED);
 
   const savedRecipes = recipes.filter((r) => savedRecipeIds.includes(r.id));
@@ -101,27 +104,29 @@ export function RecipeBoxScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-  },
-  shoppingListButton: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
-  collectionsRow: { flexGrow: 0, paddingHorizontal: spacing.md, marginVertical: spacing.md },
-  newCollectionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.secondary,
-    borderStyle: 'dashed',
-  },
-  gridItem: { flex: 1, gap: spacing.xs },
-  gridPhoto: { width: '100%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: colors.border },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+    },
+    shoppingListButton: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
+    collectionsRow: { flexGrow: 0, paddingHorizontal: spacing.md, marginVertical: spacing.md },
+    newCollectionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 44,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.secondary,
+      borderStyle: 'dashed',
+    },
+    gridItem: { flex: 1, gap: spacing.xs },
+    gridPhoto: { width: '100%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: colors.border },
+  });
+}

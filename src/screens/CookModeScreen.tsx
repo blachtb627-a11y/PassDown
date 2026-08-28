@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -7,12 +7,15 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
 import { EmptyState } from '../components/EmptyState';
-import { colors } from '../theme/colors';
-import { spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { AppTypography, spacing } from '../theme/typography';
 
 const { width } = Dimensions.get('window');
 
 function StepTimer({ minutes }: { minutes: number }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [secondsLeft, setSecondsLeft] = useState(minutes * 60);
   const [running, setRunning] = useState(false);
 
@@ -49,6 +52,8 @@ export function CookModeScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'CookMode'>>();
   const { recipes } = useAppState();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const recipe = recipes.find((r) => r.id === route.params.recipeId);
   const [currentIndex, setCurrentIndex] = useState(0);
   const listRef = useRef<FlatList>(null);
@@ -135,7 +140,8 @@ export function CookModeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   topBar: { flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.sm },
   closeButton: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
@@ -170,4 +176,5 @@ const styles = StyleSheet.create({
   },
   navButtonDisabled: { opacity: 0.3 },
   navButtonText: { fontSize: 18, fontWeight: '700', color: colors.white },
-});
+  });
+}

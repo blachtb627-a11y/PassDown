@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -13,8 +13,9 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { FilterChip } from '../components/FilterChip';
 import { EmptyState } from '../components/EmptyState';
 import { confirm, notify } from '../lib/alert';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme/typography';
 
 function formatDate(iso: string | null): string {
   if (!iso) return 'Never';
@@ -31,6 +32,8 @@ type Status = 'checking' | 'not-authorized' | 'loading' | 'ready';
 type Tab = 'accounts' | 'ads';
 
 function ManageAccountsTab() {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [status, setStatus] = useState<Status>('checking');
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -190,6 +193,8 @@ function ManageAccountsTab() {
 }
 
 function AdDeploymentTab() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.centered}>
       <EmptyState
@@ -201,6 +206,8 @@ function AdDeploymentTab() {
 }
 
 export function AdminPortalScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<Tab>('accounts');
 
   return (
@@ -214,7 +221,8 @@ export function AdminPortalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   tabBar: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, paddingTop: spacing.md },
   tabContent: { flex: 1 },
@@ -234,4 +242,5 @@ const styles = StyleSheet.create({
   badgeColumn: { alignItems: 'flex-end', gap: spacing.xs },
   badge: { flexDirection: 'row', alignItems: 'center' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.xs },
-});
+  });
+}

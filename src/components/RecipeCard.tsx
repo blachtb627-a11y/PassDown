@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recipe } from '../types/recipe';
-import { colors } from '../theme/colors';
-import { radius, spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme/typography';
 
 type Props = {
   recipe: Recipe;
@@ -16,6 +17,8 @@ type Props = {
 };
 
 export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onToggleLike, isSaved, isLiked }: Props) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const totalTime = (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
 
   return (
@@ -83,7 +86,8 @@ export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onT
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -150,4 +154,5 @@ const styles = StyleSheet.create({
     marginRight: spacing.lg,
     minHeight: 44,
   },
-});
+  });
+}

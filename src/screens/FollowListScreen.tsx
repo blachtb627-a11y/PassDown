@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, SafeAreaView, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,7 +7,8 @@ import { useAppState } from '../context/AppStateContext';
 import { fetchFollowers, fetchFollowing } from '../lib/api/social';
 import { UserResultCard } from '../components/UserResultCard';
 import { EmptyState } from '../components/EmptyState';
-import { colors } from '../theme/colors';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme/typography';
 import { Author } from '../types/recipe';
 
@@ -16,6 +17,8 @@ export function FollowListScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'FollowList'>>();
   const { userId, mode } = route.params;
   const { followedAuthorIds, toggleFollowAuthor } = useAppState();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [users, setUsers] = useState<Author[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,8 +69,10 @@ export function FollowListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.md },
-  loading: { marginTop: spacing.xl },
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    list: { padding: spacing.md },
+    loading: { marginTop: spacing.xl },
+  });
+}

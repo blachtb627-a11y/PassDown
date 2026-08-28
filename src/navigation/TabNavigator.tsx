@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
@@ -10,8 +10,9 @@ import { HomeFeedScreen } from '../screens/HomeFeedScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { RecipeBoxScreen } from '../screens/RecipeBoxScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
-import { colors } from '../theme/colors';
-import { spacing, typography } from '../theme/typography';
+import { AppColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { AppTypography, spacing } from '../theme/typography';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
@@ -24,6 +25,8 @@ function PostPlaceholder() {
 // The center Post button is the app's core action (brief section 7), so it gets its
 // own oversized, colored, labeled control instead of the default icon+label stack.
 function PostTabButton({ onPress, accessibilityState }: BottomTabBarButtonProps) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const selected = !!accessibilityState?.selected;
   return (
     <Pressable
@@ -42,6 +45,8 @@ function PostTabButton({ onPress, accessibilityState }: BottomTabBarButtonProps)
 
 export function TabNavigator() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
   return (
     <Tab.Navigator
@@ -87,44 +92,46 @@ export function TabNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    height: 68,
-    paddingBottom: spacing.sm,
-    paddingTop: spacing.xs,
-    backgroundColor: colors.surface,
-    borderTopColor: colors.border,
-  },
-  tabLabel: {
-    ...typography.meta,
-    fontWeight: '600',
-  },
-  postButtonWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  postButtonOuter: {
-    top: -18,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  postButtonOuterActive: {
-    backgroundColor: colors.secondary,
-  },
-  postLabel: {
-    ...typography.meta,
-    fontWeight: '600',
-    color: colors.primary,
-    marginTop: -12,
-  },
-});
+function createStyles(colors: AppColors, typography: AppTypography) {
+  return StyleSheet.create({
+    tabBar: {
+      height: 68,
+      paddingBottom: spacing.sm,
+      paddingTop: spacing.xs,
+      backgroundColor: colors.surface,
+      borderTopColor: colors.border,
+    },
+    tabLabel: {
+      ...typography.meta,
+      fontWeight: '600',
+    },
+    postButtonWrapper: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+    },
+    postButtonOuter: {
+      top: -18,
+      width: 58,
+      height: 58,
+      borderRadius: 29,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    postButtonOuterActive: {
+      backgroundColor: colors.secondary,
+    },
+    postLabel: {
+      ...typography.meta,
+      fontWeight: '600',
+      color: colors.primary,
+      marginTop: -12,
+    },
+  });
+}
