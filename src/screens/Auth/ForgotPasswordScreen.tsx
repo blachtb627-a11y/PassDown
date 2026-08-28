@@ -1,37 +1,56 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { PasswordInput } from '../../components/PasswordInput';
 import { colors } from '../../theme/colors';
 import { radius, spacing, typography } from '../../theme/typography';
 
-export function LogInScreen() {
+export function ForgotPasswordScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { signIn } = useAuth();
+  const { sendPasswordReset } = useAuth();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
 
-  const canSubmit = email.trim().length > 0 && password.length > 0;
-
-  const handleLogIn = async () => {
+  const handleSend = async () => {
     setError(null);
     setIsSubmitting(true);
-    const { error: signInError } = await signIn(email.trim(), password);
+    const { error: sendError } = await sendPasswordReset(email.trim());
     setIsSubmitting(false);
-    if (signInError) setError(signInError);
+    if (sendError) {
+      setError(sendError);
+    } else {
+      setSent(true);
+    }
   };
+
+  if (sent) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <Text style={typography.title}>Check your email</Text>
+          <Text style={[typography.body, styles.helper]}>
+            If an account exists for {email}, we sent a link to reset your password. Tap it, then set a new
+            password.
+          </Text>
+          <PrimaryButton label="Back to Log In" onPress={() => navigation.replace('LogIn')} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={typography.title}>Welcome back</Text>
+          <Text style={typography.title}>Reset your password</Text>
+          <Text style={[typography.body, styles.helper]}>
+            Enter your email and we'll send you a link to set a new password.
+          </Text>
 
           <Text style={[typography.bodyBold, styles.label]}>Email</Text>
           <TextInput
@@ -45,28 +64,17 @@ export function LogInScreen() {
             textContentType="emailAddress"
           />
 
-          <Text style={[typography.bodyBold, styles.label]}>Password</Text>
-          <PasswordInput
-            placeholder="Your password"
-            value={password}
-            onChangeText={setPassword}
-            textContentType="password"
-          />
-
-          <Pressable
-            onPress={() => navigation.navigate('ForgotPassword')}
-            accessibilityRole="button"
-            style={styles.forgotPassword}
-          >
-            <Text style={[typography.body, styles.forgotPasswordText]}>Forgot password?</Text>
-          </Pressable>
-
           {error ? <Text style={[typography.body, styles.error]}>{error}</Text> : null}
 
           <View style={styles.buttonWrapper}>
-            <PrimaryButton label="Log In" onPress={handleLogIn} disabled={!canSubmit} loading={isSubmitting} />
+            <PrimaryButton
+              label="Send Reset Link"
+              onPress={handleSend}
+              disabled={email.trim().length === 0}
+              loading={isSubmitting}
+            />
           </View>
-          <PrimaryButton label="New here? Sign Up" variant="outline" onPress={() => navigation.replace('SignUp')} />
+          <PrimaryButton label="Back to Log In" variant="outline" onPress={() => navigation.replace('LogIn')} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -77,6 +85,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   content: { padding: spacing.md },
+  helper: { color: colors.textMuted, marginVertical: spacing.md },
   label: { marginTop: spacing.lg, marginBottom: spacing.xs },
   input: {
     borderWidth: 1,
@@ -88,6 +97,4 @@ const styles = StyleSheet.create({
   },
   error: { color: colors.danger, marginTop: spacing.md },
   buttonWrapper: { marginTop: spacing.xl, marginBottom: spacing.sm },
-  forgotPassword: { marginTop: spacing.sm, alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
-  forgotPasswordText: { color: colors.secondary },
 });

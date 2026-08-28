@@ -64,6 +64,10 @@ Email/password is the sign-up method (simplest for the least tech-savvy users pe
 
 Every account also gets a **unique username** (separate from the display name) — the sign-up form checks availability as you type, and a unique index in Postgres (`profiles_username_unique_idx`, case-insensitive) is the actual enforcement, so a race between two people signing up with the same username at the same instant still can't succeed. **One account per email** and **email confirmation before login** are both Supabase Auth's own default behavior, not something this app's code enforces — double-check under your project's **Authentication → Sign In / Providers → Email** settings that "Confirm email" is on and duplicate emails aren't explicitly allowed, if you ever want to verify those defaults haven't been changed.
 
+**Forgot password** — "Forgot password?" on the Log In screen sends a reset link via `supabase.auth.resetPasswordForEmail()`. The link redirects back to the web app's own origin (or `https://passdown.it.com` when sent from a context with no browser origin, e.g. the native app) with the recovery token in the URL fragment; the web build picks it up automatically (`detectSessionInUrl: true`, a no-op on native) and routes straight to a "Set a new password" screen instead of the normal signed-in app. There's no deep-linking set up for opening the native app directly from that email link yet — tapping it on a phone opens the reset flow in the browser, same as the email-confirmation link already does.
+
+Supabase's own project email sending (used for confirmation and password-reset emails) runs on a shared test SMTP service with a very low rate limit (a few emails/hour) — fine for development, not for real users. Connect a real SMTP provider under **Project Settings → Authentication → SMTP Settings** before expecting more than a couple of signups/resets a day.
+
 ## Running it
 
 ```bash

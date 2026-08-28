@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { WelcomeScreen } from '../screens/Auth/WelcomeScreen';
 import { SignUpScreen } from '../screens/Auth/SignUpScreen';
 import { LogInScreen } from '../screens/Auth/LogInScreen';
+import { ForgotPasswordScreen } from '../screens/Auth/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../screens/Auth/ResetPasswordScreen';
 import { RecipeDetailScreen } from '../screens/RecipeDetailScreen';
 import { CookModeScreen } from '../screens/CookModeScreen';
 import { PostRecipeScreen } from '../screens/PostRecipe/PostRecipeScreen';
@@ -19,7 +21,7 @@ import { colors } from '../theme/colors';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { session } = useAuth();
+  const { session, isPasswordRecovery } = useAuth();
 
   return (
     <Stack.Navigator
@@ -30,7 +32,9 @@ export function RootNavigator() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      {session ? (
+      {isPasswordRecovery ? (
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
+      ) : session ? (
         <>
           <Stack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ title: 'Recipe' }} />
@@ -55,6 +59,7 @@ export function RootNavigator() {
           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Sign Up' }} />
           <Stack.Screen name="LogIn" component={LogInScreen} options={{ title: 'Log In' }} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Reset Password' }} />
         </>
       )}
     </Stack.Navigator>

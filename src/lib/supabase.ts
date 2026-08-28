@@ -15,6 +15,10 @@ export const supabase = createClient<Database>(supabaseUrl || 'https://placehold
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Only takes effect in a real browser (react-native-web) — gotrue-js
+    // guards every URL-parsing codepath behind an isBrowser() check, so this
+    // is a no-op on native. Needed so a password-recovery link's token in the
+    // URL actually gets picked up into a session on the web build.
+    detectSessionInUrl: true,
   },
 });
