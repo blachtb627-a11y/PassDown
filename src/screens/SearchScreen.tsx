@@ -147,8 +147,11 @@ export function SearchScreen() {
           <FlatList
             data={showBrowse ? [] : results}
             keyExtractor={(item) => item.id}
-            initialNumToRender={4}
-            maxToRenderPerBatch={4}
+            numColumns={2}
+            columnWrapperStyle={styles.recipeColumnWrapper}
+            contentContainerStyle={styles.recipeListContent}
+            initialNumToRender={6}
+            maxToRenderPerBatch={6}
             windowSize={5}
             ListHeaderComponent={
               <View>
@@ -228,5 +231,7 @@ function createStyles(colors: AppColors, typography: AppTypography) {
     justifyContent: 'space-between',
     marginTop: spacing.md,
   },
+  recipeColumnWrapper: { gap: spacing.sm, paddingHorizontal: spacing.md },
+  recipeListContent: { gap: spacing.sm, paddingBottom: spacing.xl },
   });
 }

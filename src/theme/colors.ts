@@ -15,6 +15,8 @@ export const lightColors = {
   overlay: 'rgba(43, 43, 43, 0.6)',
   accentGold: '#D6A234', // logo heart
   accentOlive: '#5C6B2E', // logo fork
+  headerBanner: '#1F3D2E', // bold deep-green top banner (Home feed) — a brand statement, so it
+  onHeaderBanner: '#FBF6EE', // stays the same in both themes rather than adapting like `secondary` does
 };
 
 export type AppColors = typeof lightColors;
@@ -36,4 +38,6 @@ export const darkColors: AppColors = {
   overlay: 'rgba(0, 0, 0, 0.7)',
   accentGold: '#E6BC55',
   accentOlive: '#8CA562',
+  headerBanner: '#1F3D2E',
+  onHeaderBanner: '#FBF6EE',
 };
