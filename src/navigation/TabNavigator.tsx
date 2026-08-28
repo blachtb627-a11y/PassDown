@@ -8,7 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TabParamList, RootStackParamList } from './types';
 import { HomeFeedScreen } from '../screens/HomeFeedScreen';
 import { SearchScreen } from '../screens/SearchScreen';
-import { RecipeBoxScreen } from '../screens/RecipeBoxScreen';
+import { CirclesScreen } from '../screens/CirclesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -62,8 +62,8 @@ export function TabNavigator() {
               ? 'home'
               : route.name === 'Search'
               ? 'search'
-              : route.name === 'RecipeBox'
-              ? 'file-tray-full'
+              : route.name === 'Circles'
+              ? 'people'
               : route.name === 'Profile'
               ? 'person-circle'
               : 'add-circle';
@@ -86,7 +86,7 @@ export function TabNavigator() {
           },
         }}
       />
-      <Tab.Screen name="RecipeBox" component={RecipeBoxScreen} options={{ tabBarLabel: 'Recipe Box' }} />
+      <Tab.Screen name="Circles" component={CirclesScreen} options={{ tabBarLabel: 'Circles' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Profile' }} />
     </Tab.Navigator>
   );
