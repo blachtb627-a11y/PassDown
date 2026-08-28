@@ -12,7 +12,13 @@ import {
   toggleSave as apiToggleSave,
   upsertRecipe,
 } from '../lib/api/recipes';
-import { fetchFollowedAuthorIds, toggleFollow as apiToggleFollow } from '../lib/api/social';
+import {
+  fetchFollowedAuthorIds,
+  fetchProfileWithCounts,
+  toggleFollow as apiToggleFollow,
+  updateProfile as apiUpdateProfile,
+  ProfileUpdateInput,
+} from '../lib/api/social';
 import { createCollection as apiCreateCollection, fetchCollections } from '../lib/api/collections';
 import {
   addRecipeIngredientsToShoppingList as apiAddRecipeIngredientsToShoppingList,
@@ -79,6 +85,7 @@ type AppStateContextValue = {
   clearCheckedShoppingListItems: () => void;
   addMadeThisPost: (recipeId: string, localPhotoUri: string, note?: string) => Promise<void>;
   addComment: (recipeId: string, text: string) => void;
+  updateProfile: (input: ProfileUpdateInput & { localAvatarUri?: string }) => Promise<void>;
   refetch: () => Promise<void>;
 };
 
@@ -94,10 +101,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
   const [followedAuthorIds, setFollowedAuthorIds] = useState<string[]>([]);
+  const [ownProfile, setOwnProfile] = useState<Author | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const currentUser: Author = useMemo(() => {
     if (!session?.user) return GUEST_USER;
+    if (ownProfile) return ownProfile;
     const metadata = session.user.user_metadata as { full_name?: string; username?: string } | undefined;
     return {
       id: session.user.id,
@@ -107,7 +116,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       followerCount: 0,
       followingCount: 0,
     };
-  }, [session]);
+  }, [session, ownProfile]);
 
   const refetch = useCallback(async () => {
     if (!userId) {
@@ -117,11 +126,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setCollections([]);
       setShoppingList([]);
       setFollowedAuthorIds([]);
+      setOwnProfile(null);
       setIsLoaded(true);
       return;
     }
     try {
-      const [feed, myRecipes, saved, liked, cols, list, followed] = await Promise.all([
+      const [feed, myRecipes, saved, liked, cols, list, followed, profile] = await Promise.all([
         fetchFeedRecipes(),
         fetchRecipesByAuthor(userId),
         fetchSavedRecipeIds(userId),
@@ -129,6 +139,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         fetchCollections(userId),
         fetchShoppingList(userId),
         fetchFollowedAuthorIds(userId),
+        fetchProfileWithCounts(userId),
       ]);
       setRecipes(dedupeRecipesById([...feed, ...myRecipes]));
       setSavedRecipeIds(saved);
@@ -136,6 +147,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setCollections(cols);
       setShoppingList(list);
       setFollowedAuthorIds(followed);
+      if (profile) setOwnProfile(profile);
     } catch (error) {
       console.error('Failed to load PassDown data', error);
     } finally {
@@ -271,6 +283,23 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
+    const updateProfile = async (input: ProfileUpdateInput & { localAvatarUri?: string }) => {
+      const avatarUrl = input.localAvatarUri ? await uploadPhoto(input.localAvatarUri, currentUser.id) : input.avatarUrl;
+      await apiUpdateProfile(currentUser.id, {
+        fullName: input.fullName,
+        username: input.username,
+        bio: input.bio,
+        avatarUrl,
+      });
+      setOwnProfile((prev) => ({
+        ...(prev ?? currentUser),
+        name: input.fullName,
+        username: input.username,
+        bio: input.bio,
+        avatarUri: avatarUrl ?? prev?.avatarUri,
+      }));
+    };
+
     return {
       recipes,
       savedRecipeIds,
@@ -290,6 +319,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       clearCheckedShoppingListItems,
       addMadeThisPost,
       addComment,
+      updateProfile,
       refetch,
     };
   }, [

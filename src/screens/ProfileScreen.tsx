@@ -115,7 +115,7 @@ export function ProfileScreen() {
                 onPress={() => toggleFollowAuthor(profileAuthor.id)}
               />
             ) : (
-              <PrimaryButton label="Edit Profile" variant="outline" onPress={() => {}} />
+              <PrimaryButton label="Edit Profile" variant="outline" onPress={() => navigation.navigate('EditProfile')} />
             )}
 
             <Text style={[typography.subtitle, styles.recipesLabel]}>

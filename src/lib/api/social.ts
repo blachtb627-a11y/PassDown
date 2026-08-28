@@ -43,12 +43,30 @@ export async function fetchProfileWithCounts(userId: string): Promise<Author | n
   };
 }
 
-export async function isUsernameTaken(username: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id')
-    .ilike('username', username)
-    .maybeSingle();
+export async function isUsernameTaken(username: string, excludeUserId?: string): Promise<boolean> {
+  let query = supabase.from('profiles').select('id').ilike('username', username);
+  if (excludeUserId) query = query.neq('id', excludeUserId);
+  const { data, error } = await query.maybeSingle();
   if (error) throw error;
   return !!data;
+}
+
+export type ProfileUpdateInput = {
+  fullName: string;
+  username: string;
+  bio: string;
+  avatarUrl?: string;
+};
+
+export async function updateProfile(userId: string, input: ProfileUpdateInput): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: input.fullName,
+      username: input.username,
+      bio: input.bio,
+      ...(input.avatarUrl !== undefined ? { avatar_url: input.avatarUrl } : {}),
+    })
+    .eq('id', userId);
+  if (error) throw error;
 }

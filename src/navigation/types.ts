@@ -10,6 +10,7 @@ export type RootStackParamList = {
   ShoppingList: undefined;
   Settings: undefined;
   AdminPortal: undefined;
+  EditProfile: undefined;
 };
 
 export type TabParamList = {
