@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
@@ -31,6 +31,7 @@ export function LogInScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content}>
+          <Image source={require('../../../assets/logo.png')} style={styles.logoMark} accessibilityIgnoresInvertColors />
           <Text style={typography.title}>Welcome back</Text>
 
           <Text style={[typography.bodyBold, styles.label]}>Email</Text>
@@ -77,6 +78,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   content: { padding: spacing.md },
+  logoMark: { width: 64, height: 64, alignSelf: 'center', marginBottom: spacing.md },
   label: { marginTop: spacing.lg, marginBottom: spacing.xs },
   input: {
     borderWidth: 1,

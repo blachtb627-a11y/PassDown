@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,7 +17,10 @@ export function HomeFeedScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={typography.display}>PassDown</Text>
+        <View style={styles.brandRow}>
+          <Image source={require('../../assets/logo.png')} style={styles.logoMark} accessibilityIgnoresInvertColors />
+          <Text style={typography.display}>PassDown</Text>
+        </View>
         <Ionicons name="notifications-outline" size={26} color={colors.secondary} accessibilityLabel="Notifications" />
       </View>
       <FlatList
@@ -61,6 +64,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  logoMark: { width: 32, height: 32 },
   listContent: {
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,

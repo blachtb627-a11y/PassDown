@@ -37,6 +37,8 @@ Ease-of-use and accessibility principles from sections 6 & 11 are applied throug
 
 Colors, type scale, and spacing live in `src/theme/` and follow the brief's starting palette (warm terracotta primary, deep herb green secondary, cream background, charcoal text) — centralized there so a brand refresh only touches one place.
 
+**Logo**: a rounded pin badge holding a heart-and-fork mark (`assets/logo.png`) — terracotta ring, cream fill, gold heart, olive fork, matching the palette above exactly (`colors.accentGold`/`colors.accentOlive`). It's the app icon, favicon, Android adaptive/monochrome icon, and appears in-app on the Welcome, Sign Up, and Log In screens and the Home feed header. It was recreated as flat vector shapes (rendered to PNG at build time) from the reference logo image rather than imported as a binary file, since this environment can't save a pasted image straight to disk — regenerate or tweak it by editing the SVG-building script and re-rendering (a headless-browser screenshot of an HTML/SVG page) rather than hand-editing pixels.
+
 ## Project structure
 
 ```
