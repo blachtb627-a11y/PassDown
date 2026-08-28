@@ -18,7 +18,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
-import { notify } from '../lib/alert';
+import { confirm, notify } from '../lib/alert';
 import { colors } from '../theme/colors';
 import { radius, spacing, typography } from '../theme/typography';
 
@@ -38,12 +38,14 @@ export function RecipeDetailScreen() {
     toggleFollowAuthor,
     addRecipeIngredientsToShoppingList,
     addComment,
+    deleteRecipe,
     currentUser,
   } = useAppState();
 
   const recipe = recipes.find((r) => r.id === recipeId);
   const [checkedIngredients, setCheckedIngredients] = useState<Record<string, boolean>>({});
   const [commentText, setCommentText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!recipe) {
     return <EmptyState icon="alert-circle-outline" message="This recipe couldn't be found." />;
@@ -61,6 +63,24 @@ export function RecipeDetailScreen() {
     return [...madeThis, ...comments];
   }, [recipe]);
 
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: 'Delete this recipe?',
+      message: 'This permanently deletes the recipe along with its comments and "I made this!" posts. This cannot be undone.',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteRecipe(recipe.id);
+      navigation.goBack();
+    } catch (error) {
+      notify('Could not delete recipe', error instanceof Error ? error.message : 'Please try again.');
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <FlatList
@@ -73,7 +93,15 @@ export function RecipeDetailScreen() {
       />
 
       <View style={styles.section}>
-        <Text style={typography.title}>{recipe.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[typography.title, styles.titleText]}>{recipe.title}</Text>
+          {recipe.isPrivate ? (
+            <View style={styles.privateBadge}>
+              <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
+              <Text style={typography.meta}> Private</Text>
+            </View>
+          ) : null}
+        </View>
         {recipe.story ? <Text style={[typography.body, styles.story]}>{recipe.story}</Text> : null}
 
         <View style={styles.statsRow}>
@@ -137,6 +165,18 @@ export function RecipeDetailScreen() {
             }
           }}
         />
+        {isOwnRecipe ? (
+          <>
+            <View style={{ height: spacing.sm }} />
+            <PrimaryButton
+              label="Delete Recipe"
+              icon="trash-outline"
+              variant="outline"
+              loading={isDeleting}
+              onPress={handleDelete}
+            />
+          </>
+        ) : null}
       </View>
 
       <View style={styles.section}>
@@ -253,6 +293,9 @@ const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
   heroPhoto: { width, height: width, backgroundColor: colors.border },
   section: { paddingHorizontal: spacing.md, paddingTop: spacing.lg },
+  titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
+  titleText: { flexShrink: 1 },
+  privateBadge: { flexDirection: 'row', alignItems: 'center' },
   story: { marginTop: spacing.sm, fontStyle: 'italic' },
   statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, flexWrap: 'wrap' },
   actionsBar: {

@@ -19,6 +19,7 @@ type Props = {
   diet: Diet | null;
   difficulty: Difficulty | null;
   occasion: Occasion | null;
+  isPrivate: boolean;
   onChange: (patch: Partial<{
     prepMinutes: string;
     cookMinutes: string;
@@ -28,14 +29,32 @@ type Props = {
     diet: Diet | null;
     difficulty: Difficulty | null;
     occasion: Occasion | null;
+    isPrivate: boolean;
   }>) => void;
 };
 
-export function DetailsStep({ prepMinutes, cookMinutes, servings, cuisine, mealType, diet, difficulty, occasion, onChange }: Props) {
+export function DetailsStep({
+  prepMinutes,
+  cookMinutes,
+  servings,
+  cuisine,
+  mealType,
+  diet,
+  difficulty,
+  occasion,
+  isPrivate,
+  onChange,
+}: Props) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={typography.title}>A few details</Text>
       <Text style={[typography.body, styles.helper]}>All optional — skip anything you're not sure about.</Text>
+
+      <Text style={[typography.bodyBold, styles.label]}>Who can see this?</Text>
+      <View style={styles.chipsRow}>
+        <FilterChip label="Public — anyone" selected={!isPrivate} onPress={() => onChange({ isPrivate: false })} />
+        <FilterChip label="Private — followers only" selected={isPrivate} onPress={() => onChange({ isPrivate: true })} />
+      </View>
 
       <View style={styles.timeRow}>
         <View style={styles.timeField}>

@@ -14,6 +14,7 @@ export type RecipeFormState = {
   diet: Diet | null;
   difficulty: Difficulty | null;
   occasion: Occasion | null;
+  isPrivate: boolean;
 };
 
 let idCounter = 0;
@@ -45,6 +46,7 @@ export function emptyFormState(): RecipeFormState {
     diet: null,
     difficulty: null,
     occasion: null,
+    isPrivate: false,
   };
 }
 

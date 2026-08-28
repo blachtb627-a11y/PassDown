@@ -4,6 +4,7 @@ import { Author, Collection, Recipe, ShoppingListItem } from '../types/recipe';
 import {
   addComment as apiAddComment,
   addMadeThisPost as apiAddMadeThisPost,
+  deleteRecipe as apiDeleteRecipe,
   fetchFeedRecipes,
   fetchLikedRecipeIds,
   fetchRecipesByAuthor,
@@ -64,6 +65,7 @@ export type RecipeFormInput = {
   difficulty?: Recipe['difficulty'];
   occasion?: Recipe['occasion'];
   isDraft: boolean;
+  isPrivate: boolean;
 };
 
 type AppStateContextValue = {
@@ -76,6 +78,7 @@ type AppStateContextValue = {
   isLoaded: boolean;
   currentUser: Author;
   saveRecipe: (input: RecipeFormInput) => Promise<Recipe>;
+  deleteRecipe: (recipeId: string) => Promise<void>;
   toggleSaveRecipe: (recipeId: string) => void;
   toggleLikeRecipe: (recipeId: string) => void;
   toggleFollowAuthor: (authorId: string) => void;
@@ -177,6 +180,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         return [recipe, ...withoutThis];
       });
       return recipe;
+    };
+
+    const deleteRecipe = async (recipeId: string): Promise<void> => {
+      await apiDeleteRecipe(recipeId);
+      setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
     };
 
     const toggleSaveRecipe = (recipeId: string) => {
@@ -310,6 +318,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       isLoaded,
       currentUser,
       saveRecipe,
+      deleteRecipe,
       toggleSaveRecipe,
       toggleLikeRecipe,
       toggleFollowAuthor,

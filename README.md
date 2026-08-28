@@ -22,12 +22,12 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 ## What's implemented (MVP, brief section 4)
 
 - **Home feed** — scrolling recipe cards with photo, author, time/servings, like + save.
-- **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share, author strip with follow, comments + "I made this!" posts.
+- **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share, author strip with follow, comments + "I made this!" posts. The author can delete the recipe from here; a private recipe shows a lock badge.
 - **Search & discover** — a Recipes/People toggle: recipe search (text across title/ingredients/tags, meal-type filter chips, browse-by-category grid), or a People search (by name/username, plus a "Suggested for you" list of accounts you don't already follow) with a follow button on every result.
 - **Recipe Box** — saved recipes organized into named collections.
 - **Shopping list** — checkable, combines duplicate ingredients across recipes automatically.
 - **Cook Mode** — full-screen, large-text, one step at a time, keeps screen awake, per-step timer when a step has a duration.
-- **Post a recipe** — the 6-step flow from the brief (Photo → Title/Story → Ingredients → Steps → Details → Review), with a visible "Step X of 6" progress bar, and Save-as-Draft support.
+- **Post a recipe** — the 6-step flow from the brief (Photo → Title/Story → Ingredients → Steps → Details → Review), with a visible "Step X of 6" progress bar, Save-as-Draft support, and a Public/Private choice on the Details step (private = only your followers can see it).
 - **Profile** — own and other users' profiles, recipe grid, follow button, and tappable follower/following counts that open a list of who they are (with a follow button on each).
 - **Settings** — notification toggles, account, about.
 
@@ -98,7 +98,7 @@ https://passdown.it.com
 Applied to the Supabase project via migrations. The initial schema was applied directly and isn't checked in as SQL yet (see Next Steps); `supabase/migrations/` holds changes made since, starting with the username addition below.
 
 - `profiles` — one row per account, auto-created (with two starter collections) by a trigger on signup. `username` is required and unique (case-insensitive); `full_name` is a separate, non-unique display name.
-- `recipes` — ingredients/steps stored as JSONB (matches the app's nested shape exactly); `like_count`/`comment_count` kept in sync by triggers.
+- `recipes` — ingredients/steps stored as JSONB (matches the app's nested shape exactly); `like_count`/`comment_count` kept in sync by triggers. `is_private` controls visibility: public recipes are visible to everyone, private ones only to the author and their followers — enforced by the table's row-level security policy itself (`supabase/migrations/..._add_recipe_privacy_and_delete.sql`), not by client-side filtering, so a private recipe is never even returned by the API to someone who isn't allowed to see it. The same migration lets an author delete their own recipe (cascading to its comments/likes/saves/etc.).
 - `comments`, `made_this_posts`, `likes`, `saves`, `follows`, `collections`, `collection_recipes`, `shopping_list_items`.
 
 Every table has row-level security: published recipes and social data (comments, likes, follows) are readable by everyone, but people can only write their own rows; saves, collections, and the shopping list are private per-account.

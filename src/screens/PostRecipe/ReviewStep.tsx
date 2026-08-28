@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { RecipeFormState } from './formTypes';
 import { colors } from '../../theme/colors';
 import { radius, spacing, typography } from '../../theme/typography';
@@ -13,6 +14,14 @@ export function ReviewStep({ form }: { form: RecipeFormState }) {
       <Text style={[typography.body, styles.helper]}>This is exactly how it will appear.</Text>
 
       {form.photos.length > 0 ? <Image source={{ uri: form.photos[0] }} style={styles.heroPhoto} /> : null}
+
+      <View style={styles.visibilityRow}>
+        <Ionicons name={form.isPrivate ? 'lock-closed-outline' : 'globe-outline'} size={16} color={colors.textMuted} />
+        <Text style={typography.meta}>
+          {' '}
+          {form.isPrivate ? 'Private — only your followers can see this' : 'Public — anyone can see this'}
+        </Text>
+      </View>
 
       <Text style={[typography.subtitle, styles.recipeTitle]}>{form.title || 'Untitled Recipe'}</Text>
       {form.story ? <Text style={[typography.body, styles.story]}>{form.story}</Text> : null}
@@ -58,6 +67,7 @@ const styles = StyleSheet.create({
   container: { padding: spacing.md },
   helper: { color: colors.textMuted, marginBottom: spacing.md },
   heroPhoto: { width: '100%', aspectRatio: 4 / 5, borderRadius: radius.md, backgroundColor: colors.border },
+  visibilityRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
   recipeTitle: { marginTop: spacing.md },
   story: { fontStyle: 'italic', marginTop: spacing.xs },
   statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm, flexWrap: 'wrap' },

@@ -66,6 +66,7 @@ export function mapRecipe(row: RecipeRowWithRelations): Recipe {
     comments: (row.comments ?? []).map(mapComment),
     madeThisPosts: (row.made_this_posts ?? []).map(mapMadeThisPost),
     isDraft: row.is_draft,
+    isPrivate: row.is_private,
     createdAt: row.created_at,
   };
 }

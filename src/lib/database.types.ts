@@ -285,6 +285,7 @@ export type Database = {
           id: string
           ingredients: Json
           is_draft: boolean
+          is_private: boolean
           like_count: number
           meal_type: string | null
           occasion: string | null
@@ -306,6 +307,7 @@ export type Database = {
           id?: string
           ingredients?: Json
           is_draft?: boolean
+          is_private?: boolean
           like_count?: number
           meal_type?: string | null
           occasion?: string | null
@@ -327,6 +329,7 @@ export type Database = {
           id?: string
           ingredients?: Json
           is_draft?: boolean
+          is_private?: boolean
           like_count?: number
           meal_type?: string | null
           occasion?: string | null

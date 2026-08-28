@@ -34,6 +34,7 @@ function recipeToForm(recipe: Recipe): RecipeFormState {
     diet: recipe.diet ?? null,
     difficulty: recipe.difficulty ?? null,
     occasion: recipe.occasion ?? null,
+    isPrivate: recipe.isPrivate,
   };
 }
 
@@ -98,6 +99,7 @@ export function PostRecipeScreen() {
         difficulty: form.difficulty ?? undefined,
         occasion: form.occasion ?? undefined,
         isDraft,
+        isPrivate: form.isPrivate,
       });
 
       if (isDraft) {
@@ -145,6 +147,7 @@ export function PostRecipeScreen() {
               diet={form.diet}
               difficulty={form.difficulty}
               occasion={form.occasion}
+              isPrivate={form.isPrivate}
               onChange={patchForm}
             />
           )}

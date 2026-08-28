@@ -62,6 +62,7 @@ export type Recipe = {
   comments: Comment[];
   madeThisPosts: MadeThisPost[];
   isDraft?: boolean;
+  isPrivate: boolean;
   createdAt: string;
 };
 

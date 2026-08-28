@@ -20,6 +20,12 @@ export function RecipeCard({ recipe, onPress, onToggleSave, onToggleLike, isSave
   return (
     <Pressable onPress={onPress} style={styles.card} accessibilityRole="button" accessibilityLabel={recipe.title}>
       <Image source={{ uri: recipe.photos[0] }} style={styles.photo} accessibilityIgnoresInvertColors />
+      {recipe.isPrivate ? (
+        <View style={styles.privateBadge}>
+          <Ionicons name="lock-closed" size={12} color={colors.white} />
+          <Text style={[typography.meta, styles.privateBadgeText]}> Private</Text>
+        </View>
+      ) : null}
       <View style={styles.body}>
         <View style={styles.authorRow}>
           <Image source={{ uri: recipe.author.avatarUri }} style={styles.avatar} />
@@ -82,6 +88,18 @@ const styles = StyleSheet.create({
     aspectRatio: 4 / 5,
     backgroundColor: colors.border,
   },
+  privateBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  privateBadgeText: { color: colors.white },
   body: {
     padding: spacing.md,
   },

@@ -56,6 +56,7 @@ type RecipeInput = {
   difficulty?: Recipe['difficulty'];
   occasion?: Recipe['occasion'];
   isDraft: boolean;
+  isPrivate: boolean;
 };
 
 export async function upsertRecipe(authorId: string, input: RecipeInput): Promise<Recipe> {
@@ -76,10 +77,16 @@ export async function upsertRecipe(authorId: string, input: RecipeInput): Promis
     difficulty: input.difficulty ?? null,
     occasion: input.occasion ?? null,
     is_draft: input.isDraft,
+    is_private: input.isPrivate,
   };
   const { data, error } = await supabase.from('recipes').upsert(row).select(RECIPE_SELECT).single();
   if (error) throw error;
   return mapRecipe(data as unknown as RecipeRowWithRelations);
+}
+
+export async function deleteRecipe(recipeId: string): Promise<void> {
+  const { error } = await supabase.from('recipes').delete().eq('id', recipeId);
+  if (error) throw error;
 }
 
 export async function toggleLike(recipeId: string, userId: string, isCurrentlyLiked: boolean): Promise<void> {
