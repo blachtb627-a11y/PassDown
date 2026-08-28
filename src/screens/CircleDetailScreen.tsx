@@ -16,7 +16,7 @@ import {
 import { searchUsers } from '../lib/api/social';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
-import { confirm, notify } from '../lib/alert';
+import { confirm, getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
@@ -47,7 +47,7 @@ export function CircleDetailScreen() {
       setIsOwner(circle?.createdBy === currentUser.id);
       setMembers(memberList);
     } catch (error) {
-      notify('Something went wrong', error instanceof Error ? error.message : 'Could not load this circle.');
+      notify('Something went wrong', getErrorMessage(error, 'Could not load this circle.'));
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +84,7 @@ export function CircleDetailScreen() {
       setQuery('');
       setSearchResults([]);
     } catch (error) {
-      notify('Could not add member', error instanceof Error ? error.message : 'Please try again.');
+      notify('Could not add member', getErrorMessage(error, 'Please try again.'));
     } finally {
       setBusyId(null);
     }
@@ -98,7 +98,7 @@ export function CircleDetailScreen() {
       await removeCircleMember(circleId, user.id);
       setMembers((prev) => prev.filter((m) => m.id !== user.id));
     } catch (error) {
-      notify('Could not remove member', error instanceof Error ? error.message : 'Please try again.');
+      notify('Could not remove member', getErrorMessage(error, 'Please try again.'));
     } finally {
       setBusyId(null);
     }
@@ -122,7 +122,7 @@ export function CircleDetailScreen() {
       }
       navigation.goBack();
     } catch (error) {
-      notify('Something went wrong', error instanceof Error ? error.message : 'Please try again.');
+      notify('Something went wrong', getErrorMessage(error, 'Please try again.'));
       setIsLeavingOrDeleting(false);
     }
   };

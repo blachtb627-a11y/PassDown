@@ -19,7 +19,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
 import { isUsernameTaken } from '../lib/api/social';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { notify } from '../lib/alert';
+import { getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
@@ -99,7 +99,7 @@ export function EditProfileScreen() {
       });
       navigation.goBack();
     } catch (error) {
-      notify('Could not save changes', error instanceof Error ? error.message : 'Please try again.');
+      notify('Could not save changes', getErrorMessage(error, 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

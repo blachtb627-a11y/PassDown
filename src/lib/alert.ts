@@ -32,3 +32,16 @@ export function confirm({ title, message, confirmLabel = 'OK' }: ConfirmOptions)
     ]);
   });
 }
+
+// Supabase's query builder rejects with a plain `{message, details, hint, code}`
+// object by default (it's only a real `Error` instance when `.throwOnError()` is
+// used, which this app doesn't) — so `error instanceof Error` is false for every
+// ordinary Supabase query failure, and code written that way silently falls back
+// to a generic message, hiding the real one. Check for a `.message` string on
+// anything, regardless of whether it's a real Error.
+export function getErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message) {
+    return error.message;
+  }
+  return fallback;
+}

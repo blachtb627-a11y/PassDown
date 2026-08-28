@@ -12,7 +12,7 @@ import {
 import { PrimaryButton } from '../components/PrimaryButton';
 import { FilterChip } from '../components/FilterChip';
 import { EmptyState } from '../components/EmptyState';
-import { confirm, notify } from '../lib/alert';
+import { confirm, getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme/typography';
@@ -52,7 +52,7 @@ function ManageAccountsTab() {
       setAccounts(result);
       setStatus('ready');
     } catch (error) {
-      notify('Something went wrong', error instanceof Error ? error.message : 'Could not load accounts.');
+      notify('Something went wrong', getErrorMessage(error, 'Could not load accounts.'));
       setStatus('ready');
     }
   }, []);
@@ -80,7 +80,7 @@ function ManageAccountsTab() {
       await deleteAccount(account.id);
       setAccounts((prev) => prev.filter((a) => a.id !== account.id));
     } catch (error) {
-      notify('Could not delete account', error instanceof Error ? error.message : 'Please try again.');
+      notify('Could not delete account', getErrorMessage(error, 'Please try again.'));
     } finally {
       setBusyId(null);
     }
@@ -106,7 +106,7 @@ function ManageAccountsTab() {
         prev.map((a) => (a.id === account.id ? { ...a, isAdmin: !a.isAdmin } : a))
       );
     } catch (error) {
-      notify('Something went wrong', error instanceof Error ? error.message : 'Please try again.');
+      notify('Something went wrong', getErrorMessage(error, 'Please try again.'));
     } finally {
       setBusyId(null);
     }

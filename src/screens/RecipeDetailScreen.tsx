@@ -18,7 +18,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
-import { confirm, notify } from '../lib/alert';
+import { confirm, getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
@@ -82,7 +82,7 @@ export function RecipeDetailScreen() {
       await deleteRecipe(recipe.id);
       navigation.goBack();
     } catch (error) {
-      notify('Could not delete recipe', error instanceof Error ? error.message : 'Please try again.');
+      notify('Could not delete recipe', getErrorMessage(error, 'Please try again.'));
       setIsDeleting(false);
     }
   };

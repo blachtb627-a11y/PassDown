@@ -8,7 +8,7 @@ import { useAppState } from '../context/AppStateContext';
 import { CircleSummary, createCircle, fetchMyCircles } from '../lib/api/circles';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
-import { notify } from '../lib/alert';
+import { getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
@@ -29,7 +29,7 @@ export function CirclesScreen() {
       const result = await fetchMyCircles();
       setCircles(result);
     } catch (error) {
-      notify('Something went wrong', error instanceof Error ? error.message : 'Could not load your circles.');
+      notify('Something went wrong', getErrorMessage(error, 'Could not load your circles.'));
     } finally {
       setIsLoading(false);
     }
@@ -48,7 +48,7 @@ export function CirclesScreen() {
       setCircles((prev) => [circle, ...prev]);
       setNewName('');
     } catch (error) {
-      notify('Could not create circle', error instanceof Error ? error.message : 'Please try again.');
+      notify('Could not create circle', getErrorMessage(error, 'Please try again.'));
     } finally {
       setIsCreating(false);
     }
