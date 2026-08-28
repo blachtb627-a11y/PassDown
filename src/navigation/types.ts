@@ -14,6 +14,8 @@ export type RootStackParamList = {
   Settings: undefined;
   AdminPortal: undefined;
   EditProfile: undefined;
+  Circles: undefined;
+  CircleDetail: { circleId: string; name: string };
 };
 
 export type TabParamList = {

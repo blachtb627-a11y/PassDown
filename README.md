@@ -29,6 +29,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 - **Cook Mode** — full-screen, large-text, one step at a time, keeps screen awake, per-step timer when a step has a duration.
 - **Post a recipe** — the 6-step flow from the brief (Photo → Title/Story → Ingredients → Steps → Details → Review), with a visible "Step X of 6" progress bar, Save-as-Draft support, and a Public/Private choice on the Details step (private = only your followers can see it).
 - **Profile** — own and other users' profiles, recipe grid, follow button, and tappable follower/following counts that open a list of who they are (with a follow button on each).
+- **Circles** — private named groups (open from the people icon on the Home feed banner) for bringing specific family/friends together — e.g. "Mom's Side" or "Sunday Dinner." The creator names the circle, adds people by searching name/username, and can remove anyone or delete the circle; anyone else can leave. This is the foundation for the family/friends feel from the brief's bigger vision — there's no invite/accept step yet (adding someone is immediate) and no group chat or recipe-attachment yet; both are natural next steps once this is in use.
 - **Settings** — notification toggles, account, about.
 
 Ease-of-use and accessibility principles from sections 6 & 11 are applied throughout: every icon has a text label, minimum 16pt body text (system font-scaling left on, never disabled), 44×44pt minimum tap targets, high-contrast warm palette, and gentle empty-state copy.
@@ -104,6 +105,7 @@ Applied to the Supabase project via migrations. The initial schema was applied d
 - `profiles` — one row per account, auto-created (with two starter collections) by a trigger on signup. `username` is required and unique (case-insensitive); `full_name` is a separate, non-unique display name.
 - `recipes` — ingredients/steps stored as JSONB (matches the app's nested shape exactly); `like_count`/`comment_count` kept in sync by triggers. `is_private` controls visibility: public recipes are visible to everyone, private ones only to the author and their followers — enforced by the table's row-level security policy itself (`supabase/migrations/..._add_recipe_privacy_and_delete.sql`), not by client-side filtering, so a private recipe is never even returned by the API to someone who isn't allowed to see it. The same migration lets an author delete their own recipe (cascading to its comments/likes/saves/etc.).
 - `comments`, `made_this_posts`, `likes`, `saves`, `follows`, `collections`, `collection_recipes`, `shopping_list_items`.
+- `circles` / `circle_members` — a circle is only visible to its own members (RLS, not client filtering); only the creator (`circles.created_by`) can add members or delete the circle, but any member can remove themselves (`supabase/migrations/..._add_circles.sql`).
 
 Every table has row-level security: published recipes and social data (comments, likes, follows) are readable by everyone, but people can only write their own rows; saves, collections, and the shopping list are private per-account.
 

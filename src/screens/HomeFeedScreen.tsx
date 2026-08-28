@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Image, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -54,7 +54,17 @@ export function HomeFeedScreen() {
             <Image source={require('../../assets/logo.png')} style={styles.logoMark} accessibilityIgnoresInvertColors />
             <Text style={styles.brandText}>PassDown</Text>
           </View>
-          <Ionicons name="notifications-outline" size={24} color={colors.onHeaderBanner} accessibilityLabel="Notifications" />
+          <View style={styles.bannerIcons}>
+            <Pressable
+              onPress={() => navigation.navigate('Circles')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Your Circles"
+            >
+              <Ionicons name="people-outline" size={24} color={colors.onHeaderBanner} />
+            </Pressable>
+            <Ionicons name="notifications-outline" size={24} color={colors.onHeaderBanner} accessibilityLabel="Notifications" />
+          </View>
         </View>
 
         <View style={styles.searchBarWrapper}>
@@ -145,6 +155,7 @@ function createStyles(colors: AppColors) {
       justifyContent: 'space-between',
     },
     brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    bannerIcons: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     logoMark: { width: 30, height: 30 },
     brandText: { fontSize: 24, fontWeight: '700', color: colors.onHeaderBanner },
     searchBarWrapper: {

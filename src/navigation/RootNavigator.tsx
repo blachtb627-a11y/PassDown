@@ -17,6 +17,8 @@ import { FollowListScreen } from '../screens/FollowListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AdminPortalScreen } from '../screens/AdminPortalScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
+import { CirclesScreen } from '../screens/CirclesScreen';
+import { CircleDetailScreen } from '../screens/CircleDetailScreen';
 import { useTheme } from '../theme/ThemeContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,6 +61,12 @@ export function RootNavigator() {
             name="EditProfile"
             component={EditProfileScreen}
             options={{ presentation: 'modal', title: 'Edit Profile' }}
+          />
+          <Stack.Screen name="Circles" component={CirclesScreen} options={{ title: 'Your Circles' }} />
+          <Stack.Screen
+            name="CircleDetail"
+            component={CircleDetailScreen}
+            options={({ route }) => ({ title: route.params.name })}
           />
         </>
       ) : (
