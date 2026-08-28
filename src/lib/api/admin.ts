@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 
 export type AdminAccount = {
@@ -10,6 +11,33 @@ export type AdminAccount = {
   emailConfirmedAt: string | null;
   isAdmin: boolean;
 };
+
+type AdminApiResponse = { accounts?: AdminAccount[]; success?: boolean; error?: string };
+
+// supabase-js's functions.invoke() throws a generic "non-2xx status code"
+// error on failure and leaves `data` null — it does NOT parse the function's
+// own JSON error body. Without this, every failure (self-delete blocked, not
+// authorized, a real DB error) all looked like the same unhelpful message.
+async function invokeAdminApi(body: Record<string, unknown>): Promise<AdminApiResponse> {
+  const { data, error } = await supabase.functions.invoke<AdminApiResponse>('admin-api', { body });
+
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      let message = error.message;
+      try {
+        const responseBody = await error.context.json();
+        if (responseBody?.error) message = responseBody.error;
+      } catch {
+        // response body wasn't JSON — fall back to the generic message above
+      }
+      throw new Error(message);
+    }
+    throw error;
+  }
+
+  if (data?.error) throw new Error(data.error);
+  return data ?? {};
+}
 
 export async function isCurrentUserAdmin(): Promise<boolean> {
   const { data: userData } = await supabase.auth.getUser();
@@ -24,35 +52,18 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 }
 
 export async function fetchAllAccounts(): Promise<AdminAccount[]> {
-  const { data, error } = await supabase.functions.invoke<{ accounts: AdminAccount[]; error?: string }>(
-    'admin-api',
-    { body: { action: 'list' } }
-  );
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  return data?.accounts ?? [];
+  const data = await invokeAdminApi({ action: 'list' });
+  return data.accounts ?? [];
 }
 
 export async function deleteAccount(userId: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>('admin-api', {
-    body: { action: 'delete', userId },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
+  await invokeAdminApi({ action: 'delete', userId });
 }
 
 export async function grantAdmin(userId: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>('admin-api', {
-    body: { action: 'grant_admin', userId },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
+  await invokeAdminApi({ action: 'grant_admin', userId });
 }
 
 export async function revokeAdmin(userId: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>('admin-api', {
-    body: { action: 'revoke_admin', userId },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
+  await invokeAdminApi({ action: 'revoke_admin', userId });
 }
