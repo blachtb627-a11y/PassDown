@@ -79,6 +79,9 @@ export function RecipeBoxScreen() {
           numColumns={2}
           columnWrapperStyle={{ gap: spacing.md, paddingHorizontal: spacing.md }}
           contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xl }}
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          windowSize={5}
           renderItem={({ item }) => (
             <Pressable
               style={styles.gridItem}

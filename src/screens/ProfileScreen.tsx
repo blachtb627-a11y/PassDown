@@ -69,6 +69,9 @@ export function ProfileScreen() {
         numColumns={2}
         columnWrapperStyle={{ gap: spacing.md, paddingHorizontal: spacing.md }}
         contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xl }}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.headerTop}>

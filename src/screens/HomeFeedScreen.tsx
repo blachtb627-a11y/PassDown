@@ -24,6 +24,9 @@ export function HomeFeedScreen() {
         data={recipes.filter((r) => !r.isDraft)}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         ListEmptyComponent={
           <EmptyState
             icon="restaurant-outline"

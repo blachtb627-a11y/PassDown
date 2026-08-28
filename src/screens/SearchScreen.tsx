@@ -142,6 +142,9 @@ export function SearchScreen() {
           <FlatList
             data={showBrowse ? [] : results}
             keyExtractor={(item) => item.id}
+            initialNumToRender={4}
+            maxToRenderPerBatch={4}
+            windowSize={5}
             ListHeaderComponent={
               <View>
                 <View style={styles.chipsRow}>

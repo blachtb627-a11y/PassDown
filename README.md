@@ -16,7 +16,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 | Navigation | React Navigation (bottom tabs + native stack) | Matches the brief's 5-tab IA (section 7) with a modal posting flow and pushed detail/cook-mode screens. |
 | Backend | [Supabase](https://supabase.com) | Postgres + Auth + Storage in one place, with almost no server code to run ourselves. Auth handles accounts/sessions; Postgres (with row-level security) holds recipes, comments, likes, saves, follows, collections, and the shopping list; Storage holds recipe/step photos. |
 | Data access | React Context (`useAppState()`) over a small `src/lib/api/` layer | Every screen reads/writes through one hook; the Supabase queries live in one place so the query layer can change without touching screens. |
-| Images | `expo-image-picker` + Supabase Storage | Camera + photo library picking, uploaded to a public `recipe-photos` bucket so photos are visible to every user, not just the device that took them. |
+| Images | `expo-image-picker` + Supabase Storage | Camera + photo library picking, uploaded to a public `recipe-photos` bucket so photos are visible to every user, not just the device that took them. On web, photos are downscaled (capped at 1600px on the long edge, JPEG quality 0.82) client-side via canvas before upload — a phone photo can be 10+ MB at full resolution, which made the feed feel slow since every card was fetching a full-size photo just to show a small thumbnail. |
 | Cook Mode | `expo-keep-awake` | Keeps the screen from sleeping while cooking, per section 4.8. |
 
 ## What's implemented (MVP, brief section 4)
