@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Step } from '../../types/recipe';
@@ -7,6 +7,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { colors } from '../../theme/colors';
 import { radius, spacing, typography } from '../../theme/typography';
 import { emptyStep } from './formTypes';
+import { notify } from '../../lib/alert';
 
 type Props = {
   steps: Step[];
@@ -26,7 +27,7 @@ export function StepsStep({ steps, onChange }: Props) {
   const addStepPhoto = async (id: string) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Photo access needed', 'Allow photo library access in Settings to add a step photo.');
+      notify('Photo access needed', 'Allow photo library access in Settings to add a step photo.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });

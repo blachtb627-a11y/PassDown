@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, RefreshControl, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, RefreshControl, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   AdminAccount,
@@ -12,6 +12,7 @@ import {
 import { PrimaryButton } from '../components/PrimaryButton';
 import { FilterChip } from '../components/FilterChip';
 import { EmptyState } from '../components/EmptyState';
+import { confirm, notify } from '../lib/alert';
 import { colors } from '../theme/colors';
 import { radius, spacing, typography } from '../theme/typography';
 
@@ -48,7 +49,7 @@ function ManageAccountsTab() {
       setAccounts(result);
       setStatus('ready');
     } catch (error) {
-      Alert.alert('Something went wrong', error instanceof Error ? error.message : 'Could not load accounts.');
+      notify('Something went wrong', error instanceof Error ? error.message : 'Could not load accounts.');
       setStatus('ready');
     }
   }, []);
@@ -63,61 +64,49 @@ function ManageAccountsTab() {
     setIsRefreshing(false);
   };
 
-  const handleDelete = (account: AdminAccount) => {
-    Alert.alert(
-      'Delete this account?',
-      `This permanently deletes ${account.email ?? account.username ?? 'this account'} and everything they posted. This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setBusyId(account.id);
-            try {
-              await deleteAccount(account.id);
-              setAccounts((prev) => prev.filter((a) => a.id !== account.id));
-            } catch (error) {
-              Alert.alert('Could not delete account', error instanceof Error ? error.message : 'Please try again.');
-            } finally {
-              setBusyId(null);
-            }
-          },
-        },
-      ]
-    );
+  const handleDelete = async (account: AdminAccount) => {
+    const ok = await confirm({
+      title: 'Delete this account?',
+      message: `This permanently deletes ${account.email ?? account.username ?? 'this account'} and everything they posted. This cannot be undone.`,
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+
+    setBusyId(account.id);
+    try {
+      await deleteAccount(account.id);
+      setAccounts((prev) => prev.filter((a) => a.id !== account.id));
+    } catch (error) {
+      notify('Could not delete account', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const handleToggleAdmin = (account: AdminAccount) => {
+  const handleToggleAdmin = async (account: AdminAccount) => {
     const name = account.email ?? account.username ?? 'this account';
     const title = account.isAdmin ? `Remove admin access from ${name}?` : `Make ${name} an admin?`;
     const message = account.isAdmin
       ? undefined
       : 'They will be able to view every account and delete them, and grant admin access to others.';
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: account.isAdmin ? 'Remove Admin' : 'Make Admin',
-        style: account.isAdmin ? 'destructive' : 'default',
-        onPress: async () => {
-          setBusyId(account.id);
-          try {
-            if (account.isAdmin) {
-              await revokeAdmin(account.id);
-            } else {
-              await grantAdmin(account.id);
-            }
-            setAccounts((prev) =>
-              prev.map((a) => (a.id === account.id ? { ...a, isAdmin: !a.isAdmin } : a))
-            );
-          } catch (error) {
-            Alert.alert('Something went wrong', error instanceof Error ? error.message : 'Please try again.');
-          } finally {
-            setBusyId(null);
-          }
-        },
-      },
-    ]);
+    const ok = await confirm({ title, message, confirmLabel: account.isAdmin ? 'Remove Admin' : 'Make Admin' });
+    if (!ok) return;
+
+    setBusyId(account.id);
+    try {
+      if (account.isAdmin) {
+        await revokeAdmin(account.id);
+      } else {
+        await grantAdmin(account.id);
+      }
+      setAccounts((prev) =>
+        prev.map((a) => (a.id === account.id ? { ...a, isAdmin: !a.isAdmin } : a))
+      );
+    } catch (error) {
+      notify('Something went wrong', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   if (status === 'checking' || status === 'loading') {

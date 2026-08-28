@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -19,6 +18,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
+import { notify } from '../lib/alert';
 import { colors } from '../theme/colors';
 import { radius, spacing, typography } from '../theme/typography';
 
@@ -131,9 +131,9 @@ export function RecipeDetailScreen() {
           onPress={async () => {
             try {
               await addRecipeIngredientsToShoppingList(recipe);
-              Alert.alert('Added!', 'Ingredients added to your Shopping List.');
+              notify('Added!', 'Ingredients added to your Shopping List.');
             } catch (error) {
-              Alert.alert('Something went wrong', 'Could not add ingredients to your Shopping List.');
+              notify('Something went wrong', 'Could not add ingredients to your Shopping List.');
             }
           }}
         />

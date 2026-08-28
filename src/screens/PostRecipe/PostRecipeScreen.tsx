@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,6 +7,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { useAppState } from '../../context/AppStateContext';
 import { Recipe } from '../../types/recipe';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { notify } from '../../lib/alert';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/typography';
 import { ProgressBar } from './ProgressBar';
@@ -85,14 +86,14 @@ export function PostRecipeScreen() {
       });
 
       if (isDraft) {
-        Alert.alert('Saved as Draft', 'Find it in your Profile to finish it later.');
+        notify('Saved as Draft', 'Find it in your Profile to finish it later.');
         navigation.goBack();
       } else {
         navigation.goBack();
         navigation.navigate('RecipeDetail', { recipeId: recipe.id });
       }
     } catch (error) {
-      Alert.alert('Something went wrong', 'Could not save your recipe. Please try again.');
+      notify('Something went wrong', 'Could not save your recipe. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

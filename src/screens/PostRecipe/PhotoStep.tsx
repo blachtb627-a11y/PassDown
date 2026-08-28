@@ -1,10 +1,11 @@
 import React from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { colors } from '../../theme/colors';
 import { radius, spacing, typography } from '../../theme/typography';
+import { notify } from '../../lib/alert';
 
 const MAX_PHOTOS = 10;
 
@@ -17,7 +18,7 @@ export function PhotoStep({ photos, onChange }: Props) {
   const addFromLibrary = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Photo access needed', 'Allow photo library access in Settings to add recipe photos.');
+      notify('Photo access needed', 'Allow photo library access in Settings to add recipe photos.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -34,7 +35,7 @@ export function PhotoStep({ photos, onChange }: Props) {
   const addFromCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Camera access needed', 'Allow camera access in Settings to take a recipe photo.');
+      notify('Camera access needed', 'Allow camera access in Settings to take a recipe photo.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
