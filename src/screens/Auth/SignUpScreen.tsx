@@ -6,6 +6,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { isUsernameTaken } from '../../lib/api/social';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { PasswordInput } from '../../components/PasswordInput';
 import { colors } from '../../theme/colors';
 import { radius, spacing, typography } from '../../theme/typography';
 
@@ -135,13 +136,10 @@ export function SignUpScreen() {
           />
 
           <Text style={[typography.bodyBold, styles.label]}>Password</Text>
-          <TextInput
-            style={styles.input}
+          <PasswordInput
             placeholder="At least 6 characters"
-            placeholderTextColor={colors.textMuted}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
             textContentType="newPassword"
           />
 

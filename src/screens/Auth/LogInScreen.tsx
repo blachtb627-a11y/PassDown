@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { PasswordInput } from '../../components/PasswordInput';
 import { colors } from '../../theme/colors';
 import { radius, spacing, typography } from '../../theme/typography';
 
@@ -45,13 +46,10 @@ export function LogInScreen() {
           />
 
           <Text style={[typography.bodyBold, styles.label]}>Password</Text>
-          <TextInput
-            style={styles.input}
+          <PasswordInput
             placeholder="Your password"
-            placeholderTextColor={colors.textMuted}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
             textContentType="password"
           />
 
