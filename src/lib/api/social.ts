@@ -1,11 +1,36 @@
 import { supabase } from '../supabase';
 import { Author } from '../../types/recipe';
+import { Tables } from '../database.types';
 import { mapAuthor } from './mappers';
+
+type FollowProfileRow = Pick<Tables<'profiles'>, 'id' | 'full_name' | 'username' | 'avatar_url' | 'bio'>;
 
 export async function fetchFollowedAuthorIds(userId: string): Promise<string[]> {
   const { data, error } = await supabase.from('follows').select('followee_id').eq('follower_id', userId);
   if (error) throw error;
   return data.map((row) => row.followee_id);
+}
+
+export async function fetchFollowers(userId: string): Promise<Author[]> {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('profile:profiles!follows_follower_id_fkey(id, full_name, username, avatar_url, bio)')
+    .eq('followee_id', userId);
+  if (error) throw error;
+  return (data as unknown as { profile: FollowProfileRow | null }[])
+    .filter((row): row is { profile: FollowProfileRow } => !!row.profile)
+    .map((row) => mapAuthor(row.profile, row.profile.id));
+}
+
+export async function fetchFollowing(userId: string): Promise<Author[]> {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('profile:profiles!follows_followee_id_fkey(id, full_name, username, avatar_url, bio)')
+    .eq('follower_id', userId);
+  if (error) throw error;
+  return (data as unknown as { profile: FollowProfileRow | null }[])
+    .filter((row): row is { profile: FollowProfileRow } => !!row.profile)
+    .map((row) => mapAuthor(row.profile, row.profile.id));
 }
 
 export async function toggleFollow(

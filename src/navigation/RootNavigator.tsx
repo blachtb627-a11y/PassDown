@@ -13,6 +13,7 @@ import { CookModeScreen } from '../screens/CookModeScreen';
 import { PostRecipeScreen } from '../screens/PostRecipe/PostRecipeScreen';
 import { ShoppingListScreen } from '../screens/ShoppingListScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { FollowListScreen } from '../screens/FollowListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AdminPortalScreen } from '../screens/AdminPortalScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
@@ -45,6 +46,11 @@ export function RootNavigator() {
             options={{ presentation: 'modal', title: 'Post a Recipe' }}
           />
           <Stack.Screen name="UserProfile" component={ProfileScreen} options={{ title: 'Profile' }} />
+          <Stack.Screen
+            name="FollowList"
+            component={FollowListScreen}
+            options={({ route }) => ({ title: route.params.title })}
+          />
           <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: 'Shopping List' }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
           <Stack.Screen name="AdminPortal" component={AdminPortalScreen} options={{ title: 'Admin Portal' }} />

@@ -98,12 +98,30 @@ export function ProfileScreen() {
                   <Text style={typography.meta}>
                     <Text style={typography.bodyBold}>{authoredRecipes.length}</Text> recipes
                   </Text>
-                  <Text style={typography.meta}>
-                    <Text style={typography.bodyBold}>{profileAuthor.followerCount}</Text> followers
-                  </Text>
-                  <Text style={typography.meta}>
-                    <Text style={typography.bodyBold}>{profileAuthor.followingCount}</Text> following
-                  </Text>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() =>
+                      navigation.navigate('FollowList', { userId: profileAuthor.id, mode: 'followers', title: 'Followers' })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`${profileAuthor.followerCount} followers`}
+                  >
+                    <Text style={typography.meta}>
+                      <Text style={typography.bodyBold}>{profileAuthor.followerCount}</Text> followers
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() =>
+                      navigation.navigate('FollowList', { userId: profileAuthor.id, mode: 'following', title: 'Following' })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`${profileAuthor.followingCount} following`}
+                  >
+                    <Text style={typography.meta}>
+                      <Text style={typography.bodyBold}>{profileAuthor.followingCount}</Text> following
+                    </Text>
+                  </Pressable>
                 </View>
               </View>
             </View>

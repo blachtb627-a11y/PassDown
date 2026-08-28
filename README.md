@@ -28,7 +28,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 - **Shopping list** — checkable, combines duplicate ingredients across recipes automatically.
 - **Cook Mode** — full-screen, large-text, one step at a time, keeps screen awake, per-step timer when a step has a duration.
 - **Post a recipe** — the 6-step flow from the brief (Photo → Title/Story → Ingredients → Steps → Details → Review), with a visible "Step X of 6" progress bar, and Save-as-Draft support.
-- **Profile** — own and other users' profiles, recipe grid, follower/following counts, follow button.
+- **Profile** — own and other users' profiles, recipe grid, follow button, and tappable follower/following counts that open a list of who they are (with a follow button on each).
 - **Settings** — notification toggles, account, about.
 
 Ease-of-use and accessibility principles from sections 6 & 11 are applied throughout: every icon has a text label, minimum 16pt body text (system font-scaling left on, never disabled), 44×44pt minimum tap targets, high-contrast warm palette, and gentle empty-state copy.

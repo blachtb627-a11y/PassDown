@@ -9,6 +9,7 @@ export type RootStackParamList = {
   CookMode: { recipeId: string };
   PostRecipe: { recipeId?: string } | undefined;
   UserProfile: { userId: string };
+  FollowList: { userId: string; mode: 'followers' | 'following'; title: string };
   ShoppingList: undefined;
   Settings: undefined;
   AdminPortal: undefined;
