@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,7 +9,7 @@ import { Recipe } from '../../types/recipe';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { notify } from '../../lib/alert';
 import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/typography';
+import { spacing, typography } from '../../theme/typography';
 import { ProgressBar } from './ProgressBar';
 import { PhotoStep } from './PhotoStep';
 import { TitleStoryStep } from './TitleStoryStep';
@@ -61,6 +61,21 @@ export function PostRecipeScreen() {
         return form.steps.some((s) => s.text.trim());
       default:
         return true;
+    }
+  };
+
+  const nextHint = (): string | null => {
+    switch (stepIndex) {
+      case 0:
+        return 'Add at least one photo to continue.';
+      case 1:
+        return 'Add a title to continue.';
+      case 2:
+        return 'Fill in the "Ingredient" name field for at least one ingredient to continue — quantity and unit alone aren\'t enough.';
+      case 3:
+        return 'Add at least one step to continue.';
+      default:
+        return null;
     }
   };
 
@@ -154,16 +169,21 @@ export function PostRecipeScreen() {
               />
             </>
           ) : (
-            <View style={styles.navRow}>
-              {stepIndex > 0 ? (
-                <View style={styles.navButtonWrapper}>
-                  <PrimaryButton label="Back" variant="outline" onPress={() => setStepIndex((i) => i - 1)} />
-                </View>
+            <>
+              {!canGoNext() && nextHint() ? (
+                <Text style={[typography.meta, styles.hint]}>{nextHint()}</Text>
               ) : null}
-              <View style={styles.navButtonWrapper}>
-                <PrimaryButton label="Next" disabled={!canGoNext()} onPress={() => setStepIndex((i) => i + 1)} />
+              <View style={styles.navRow}>
+                {stepIndex > 0 ? (
+                  <View style={styles.navButtonWrapper}>
+                    <PrimaryButton label="Back" variant="outline" onPress={() => setStepIndex((i) => i - 1)} />
+                  </View>
+                ) : null}
+                <View style={styles.navButtonWrapper}>
+                  <PrimaryButton label="Next" disabled={!canGoNext()} onPress={() => setStepIndex((i) => i + 1)} />
+                </View>
               </View>
-            </View>
+            </>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -175,6 +195,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   footer: { padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  hint: { color: colors.textMuted, marginBottom: spacing.sm, textAlign: 'center' },
   navRow: { flexDirection: 'row', gap: spacing.sm },
   navButtonWrapper: { flex: 1 },
 });

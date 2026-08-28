@@ -25,7 +25,16 @@ export function IngredientsStep({ ingredients, onChange }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={typography.title}>Ingredients</Text>
-      <Text style={[typography.body, styles.helper]}>Add each ingredient as quantity, unit, and item.</Text>
+      <Text style={[typography.body, styles.helper]}>
+        Add each ingredient as quantity, unit, and name. The ingredient name is required.
+      </Text>
+
+      <View style={styles.labelRow}>
+        <Text style={[typography.meta, styles.quantityInput]}>Qty</Text>
+        <Text style={[typography.meta, styles.unitInput]}>Unit</Text>
+        <Text style={[typography.meta, styles.itemInput]}>Ingredient (required)</Text>
+        <View style={styles.removeButton} />
+      </View>
 
       {ingredients.map((ing, index) => (
         <View key={ing.id} style={styles.row}>
@@ -80,6 +89,7 @@ export function IngredientsStep({ ingredients, onChange }: Props) {
 const styles = StyleSheet.create({
   container: { padding: spacing.md },
   helper: { color: colors.textMuted, marginBottom: spacing.lg },
+  labelRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs },
   row: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm, alignItems: 'center' },
   input: {
     borderWidth: 1,
