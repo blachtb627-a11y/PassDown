@@ -23,7 +23,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 
 - **Home feed** — scrolling recipe cards with photo, author, time/servings, like + save.
 - **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share, author strip with follow, comments + "I made this!" posts.
-- **Search & discover** — text search across title/ingredients/tags, meal-type filter chips, browse-by-category grid.
+- **Search & discover** — a Recipes/People toggle: recipe search (text across title/ingredients/tags, meal-type filter chips, browse-by-category grid), or a People search (by name/username, plus a "Suggested for you" list of accounts you don't already follow) with a follow button on every result.
 - **Recipe Box** — saved recipes organized into named collections.
 - **Shopping list** — checkable, combines duplicate ingredients across recipes automatically.
 - **Cook Mode** — full-screen, large-text, one step at a time, keeps screen awake, per-step timer when a step has a duration.
@@ -128,4 +128,5 @@ The brief's remaining [open questions](#) (private/family sharing, remix attribu
 2. **Onboarding carousel** — the brief's 3-screen skippable welcome + guided first-post walkthrough (section 8.3) isn't built; today sign-up goes straight from Welcome to the app.
 3. **"I made this!" posting UI** — the data model and detail-screen display exist, but there's no button yet for a viewer to actually submit their own attempt photo.
 4. **Push notifications** — the notification types exist in Settings as toggles but don't fire real notifications yet.
-5. **Phase 2 features** (brief section 5) — video steps, voice-guided Cook Mode, family/private groups, ratings, meal planning, unit conversion, PDF export — intentionally out of scope for this MVP pass.
+5. **Direct messaging** — planned next: 1:1 messages between users, separate from comments/follows. Needs its own database table + security rules, a conversation list, and a chat screen.
+6. **Phase 2 features** (brief section 5) — video steps, voice-guided Cook Mode, family/private groups, ratings, meal planning, unit conversion, PDF export — intentionally out of scope for this MVP pass.

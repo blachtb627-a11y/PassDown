@@ -43,6 +43,30 @@ export async function fetchProfileWithCounts(userId: string): Promise<Author | n
   };
 }
 
+export async function searchUsers(query: string, excludeUserId: string): Promise<Author[]> {
+  const q = query.trim().replace(/[,()%]/g, '');
+  if (!q) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, username, avatar_url, bio')
+    .or(`full_name.ilike.%${q}%,username.ilike.%${q}%`)
+    .neq('id', excludeUserId)
+    .limit(30);
+  if (error) throw error;
+  return data.map((row) => mapAuthor(row, row.id));
+}
+
+export async function fetchSuggestedUsers(excludeIds: string[]): Promise<Author[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, username, avatar_url, bio')
+    .not('id', 'in', `(${excludeIds.length ? excludeIds.join(',') : 'null'})`)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (error) throw error;
+  return data.map((row) => mapAuthor(row, row.id));
+}
+
 export async function isUsernameTaken(username: string, excludeUserId?: string): Promise<boolean> {
   let query = supabase.from('profiles').select('id').ilike('username', username);
   if (excludeUserId) query = query.neq('id', excludeUserId);
