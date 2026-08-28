@@ -185,6 +185,7 @@ export function SearchScreen() {
                 onToggleSave={() => toggleSaveRecipe(item.id)}
                 onToggleLike={() => toggleLikeRecipe(item.id)}
                 onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
+                onPressComments={() => navigation.navigate('RecipeDetail', { recipeId: item.id, focusComments: true })}
               />
             )}
           />

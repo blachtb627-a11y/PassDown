@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -27,7 +27,7 @@ const { width } = Dimensions.get('window');
 export function RecipeDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'RecipeDetail'>>();
-  const { recipeId } = route.params;
+  const { recipeId, focusComments } = route.params;
   const {
     recipes,
     savedRecipeIds,
@@ -46,6 +46,9 @@ export function RecipeDetailScreen() {
   const [checkedIngredients, setCheckedIngredients] = useState<Record<string, boolean>>({});
   const [commentText, setCommentText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const commentInputRef = useRef<TextInput>(null);
+  const hasScrolledToComments = useRef(false);
 
   if (!recipe) {
     return <EmptyState icon="alert-circle-outline" message="This recipe couldn't be found." />;
@@ -82,7 +85,7 @@ export function RecipeDetailScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView ref={scrollViewRef} style={styles.container} contentContainerStyle={styles.content}>
       <FlatList
         data={recipe.photos}
         keyExtractor={(uri, i) => `${uri}-${i}`}
@@ -241,10 +244,20 @@ export function RecipeDetailScreen() {
         ) : null}
       </Pressable>
 
-      <View style={styles.section}>
+      <View
+        style={styles.section}
+        onLayout={(e) => {
+          if (!focusComments || hasScrolledToComments.current) return;
+          hasScrolledToComments.current = true;
+          const y = e.nativeEvent.layout.y;
+          scrollViewRef.current?.scrollTo({ y, animated: true });
+          commentInputRef.current?.focus();
+        }}
+      >
         <Text style={typography.subtitle}>Comments & "I Made This!"</Text>
         <View style={styles.commentInputRow}>
           <TextInput
+            ref={commentInputRef}
             style={styles.commentInput}
             placeholder="Add an encouraging comment..."
             placeholderTextColor={colors.textMuted}

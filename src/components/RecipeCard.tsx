@@ -8,13 +8,14 @@ import { radius, spacing, typography } from '../theme/typography';
 type Props = {
   recipe: Recipe;
   onPress: () => void;
+  onPressComments: () => void;
   onToggleSave: () => void;
   onToggleLike: () => void;
   isSaved: boolean;
   isLiked: boolean;
 };
 
-export function RecipeCard({ recipe, onPress, onToggleSave, onToggleLike, isSaved, isLiked }: Props) {
+export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onToggleLike, isSaved, isLiked }: Props) {
   const totalTime = (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
 
   return (
@@ -57,6 +58,15 @@ export function RecipeCard({ recipe, onPress, onToggleSave, onToggleLike, isSave
           >
             <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={22} color={isLiked ? colors.primary : colors.text} />
             <Text style={typography.meta}> {recipe.likeCount}</Text>
+          </Pressable>
+          <Pressable
+            onPress={onPressComments}
+            style={styles.actionButton}
+            accessibilityRole="button"
+            accessibilityLabel="View and add comments"
+          >
+            <Ionicons name="chatbubble-outline" size={22} color={colors.text} />
+            <Text style={typography.meta}> {recipe.commentCount}</Text>
           </Pressable>
           <Pressable
             onPress={onToggleSave}

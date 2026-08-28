@@ -5,7 +5,7 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   ResetPassword: undefined;
   Tabs: undefined;
-  RecipeDetail: { recipeId: string };
+  RecipeDetail: { recipeId: string; focusComments?: boolean };
   CookMode: { recipeId: string };
   PostRecipe: { recipeId?: string } | undefined;
   UserProfile: { userId: string };

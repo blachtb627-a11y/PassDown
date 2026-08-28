@@ -21,7 +21,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 
 ## What's implemented (MVP, brief section 4)
 
-- **Home feed** — scrolling recipe cards with photo, author, time/servings, like + save.
+- **Home feed** — scrolling recipe cards with photo, author, time/servings, like + comment + save; tapping the comment icon jumps straight to the recipe's comments and focuses the input, instead of opening the recipe and scrolling down.
 - **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share, author strip with follow, comments + "I made this!" posts. The author can delete the recipe from here; a private recipe shows a lock badge.
 - **Search & discover** — a Recipes/People toggle: recipe search (text across title/ingredients/tags, meal-type filter chips, browse-by-category grid), or a People search (by name/username, plus a "Suggested for you" list of accounts you don't already follow) with a follow button on every result.
 - **Recipe Box** — saved recipes organized into named collections.
