@@ -2,6 +2,7 @@ import { supabase } from '../supabase';
 import { Author } from '../../types/recipe';
 import { Tables } from '../database.types';
 import { mapAuthor } from './mappers';
+import { generateUuid } from '../uuid';
 
 export type CircleSummary = {
   id: string;
@@ -52,21 +53,24 @@ export async function fetchCircle(circleId: string): Promise<CircleSummary | nul
 }
 
 export async function createCircle(userId: string, name: string): Promise<CircleSummary> {
-  // created_by is deliberately not sent — it defaults to auth.uid() in the
-  // database, so it's always computed the same way the RLS check reads it.
-  const { data: circle, error } = await supabase
-    .from('circles')
-    .insert({ name })
-    .select('id, name, created_by')
-    .single();
+  // The id is generated here (rather than left to the column's default) so we
+  // never need to read the row back after inserting it. That read-back is
+  // exactly what broke circle creation: circles' SELECT policy only allows a
+  // circle's members to see it, and the creator isn't a member yet at the
+  // moment this insert would otherwise return the new row — Postgres treats
+  // that as the row being invisible to its own writer and rejects the insert
+  // outright, surfacing the same error as an actual permission violation.
+  // created_by is left off too — it defaults to auth.uid() in the database.
+  const id = generateUuid();
+  const { error } = await supabase.from('circles').insert({ id, name });
   if (error) throw error;
 
   const { error: memberError } = await supabase
     .from('circle_members')
-    .insert({ circle_id: circle.id, user_id: userId, added_by: userId });
+    .insert({ circle_id: id, user_id: userId, added_by: userId });
   if (memberError) throw memberError;
 
-  return { id: circle.id, name: circle.name, createdBy: circle.created_by, memberCount: 1 };
+  return { id, name, createdBy: userId, memberCount: 1 };
 }
 
 export async function deleteCircle(circleId: string): Promise<void> {
