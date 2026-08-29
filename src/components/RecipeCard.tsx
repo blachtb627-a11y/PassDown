@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Recipe } from '../types/recipe';
+import { Diet, Recipe } from '../types/recipe';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { getCuisineColor } from '../theme/cuisineColors';
@@ -17,14 +17,40 @@ type Props = {
   isLiked: boolean;
 };
 
+// Single-letter/short-code badges for the one diet the poster picked — a compact stand-in
+// for the multi-tag dietary badges in the reference design until recipes support more than
+// one diet tag at a time.
+const DIET_BADGE: Record<Exclude<Diet, 'None'>, { code: string; color: string }> = {
+  Vegetarian: { code: 'V', color: '#5C7A4A' },
+  Vegan: { code: 'VG', color: '#3F7D5A' },
+  'Gluten-Free': { code: 'GF', color: '#C4922B' },
+  'Dairy-Free': { code: 'DF', color: '#B5451F' },
+};
+
 export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onToggleLike, isSaved, isLiked }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const cuisineColor = getCuisineColor(recipe.cuisine);
   const hasPhoto = recipe.photos.length > 0;
+  const dietBadge = recipe.diet && recipe.diet !== 'None' ? DIET_BADGE[recipe.diet] : null;
+  const tags = [recipe.occasion, recipe.difficulty, recipe.mealType].filter(Boolean) as string[];
 
   return (
     <Pressable onPress={onPress} style={styles.card} accessibilityRole="button" accessibilityLabel={recipe.title}>
+      <Pressable
+        style={styles.authorRow}
+        hitSlop={4}
+        accessibilityLabel={`${recipe.author.name}'s profile`}
+      >
+        <Image
+          source={{ uri: recipe.author.avatarUri ?? 'https://picsum.photos/seed/recipe-author/100' }}
+          style={styles.authorAvatar}
+        />
+        <Text style={typography.meta} numberOfLines={1}>
+          <Text style={typography.bodyBold}>{recipe.author.name}</Text> passed this down
+        </Text>
+      </Pressable>
+
       <View style={styles.photoWrapper}>
         {hasPhoto ? (
           <Image source={{ uri: recipe.photos[0] }} style={styles.photo} accessibilityIgnoresInvertColors />
@@ -45,44 +71,74 @@ export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onT
             <Ionicons name="lock-closed" size={12} color={colors.white} />
           </View>
         ) : null}
+        <View style={styles.titleScrim}>
+          <Text style={[typography.photoTitle, styles.titleText]} numberOfLines={2}>
+            {recipe.title}
+          </Text>
+        </View>
       </View>
+
       <View style={styles.body}>
-        <Text style={[typography.bodyBold, styles.title]} numberOfLines={2}>
-          {recipe.title}
-        </Text>
-        <Text style={typography.meta} numberOfLines={1}>
-          from {recipe.author.name}
-        </Text>
+        {dietBadge || tags.length > 0 ? (
+          <View style={styles.tagsRow}>
+            {dietBadge ? (
+              <View style={[styles.dietBadge, { backgroundColor: dietBadge.color }]}>
+                <Text style={styles.dietBadgeText}>{dietBadge.code}</Text>
+              </View>
+            ) : null}
+            {tags.map((tag) => (
+              <View key={tag} style={styles.pill}>
+                <Text style={[typography.meta, styles.pillText]} numberOfLines={1}>
+                  {tag}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         <View style={styles.actionsRow}>
-          <Pressable
-            onPress={onToggleLike}
-            style={styles.actionButton}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={isLiked ? 'Unlike recipe' : 'Like recipe'}
-          >
-            <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={20} color={isLiked ? colors.primary : colors.textMuted} />
-            <Text style={typography.meta}> {recipe.likeCount}</Text>
-          </Pressable>
-          <Pressable
-            onPress={onPressComments}
-            style={styles.actionButton}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel="View and add comments"
-          >
-            <Ionicons name="chatbubble-outline" size={19} color={colors.textMuted} />
-            <Text style={typography.meta}> {recipe.commentCount}</Text>
-          </Pressable>
-          <Pressable
-            onPress={onToggleSave}
-            style={styles.actionButton}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={isSaved ? 'Remove from Recipe Box' : 'Save to Recipe Box'}
-          >
-            <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={19} color={isSaved ? colors.secondary : colors.textMuted} />
-          </Pressable>
+          <View style={styles.actionsGroup}>
+            <Pressable
+              onPress={onToggleLike}
+              style={styles.actionButton}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={isLiked ? 'Unlike recipe' : 'Like recipe'}
+            >
+              <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={20} color={isLiked ? colors.primary : colors.textMuted} />
+              <Text style={typography.meta}> {recipe.likeCount}</Text>
+            </Pressable>
+            <Pressable
+              onPress={onPressComments}
+              style={styles.actionButton}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="View and add comments"
+            >
+              <Ionicons name="chatbubble-outline" size={19} color={colors.textMuted} />
+              <Text style={typography.meta}> {recipe.commentCount}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.actionsGroup}>
+            <Pressable
+              onPress={() => Share.share({ message: `Check out "${recipe.title}" on PassDown!` })}
+              style={styles.actionButton}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Share recipe"
+            >
+              <Ionicons name="share-outline" size={20} color={colors.textMuted} />
+            </Pressable>
+            <Pressable
+              onPress={onToggleSave}
+              style={styles.actionButton}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={isSaved ? 'Remove from Recipe Box' : 'Save to Recipe Box'}
+            >
+              <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={19} color={isSaved ? colors.secondary : colors.textMuted} />
+            </Pressable>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -99,13 +155,21 @@ function createStyles(colors: AppColors) {
       borderWidth: 1,
       borderColor: colors.border,
     },
+    authorRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
+      minHeight: 32,
+    },
+    authorAvatar: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.border },
     photoWrapper: { position: 'relative' },
     photo: {
       width: '100%',
-      aspectRatio: 1,
+      aspectRatio: 4 / 3,
       backgroundColor: colors.border,
-      borderTopLeftRadius: radius.lg,
-      borderTopRightRadius: radius.lg,
     },
     placeholderPhoto: { alignItems: 'center', justifyContent: 'center' },
     cuisineBadge: {
@@ -129,17 +193,55 @@ function createStyles(colors: AppColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    titleScrim: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(20,15,10,0.5)',
+      paddingHorizontal: spacing.sm,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    titleText: {
+      textShadowColor: 'rgba(0,0,0,0.4)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
+    },
     body: {
       padding: spacing.sm,
     },
-    title: {
-      marginBottom: 2,
+    tagsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginBottom: spacing.xs,
     },
+    dietBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dietBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+    pill: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+    },
+    pillText: { fontWeight: '600' },
     actionsRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      alignItems: 'center',
       marginTop: spacing.xs,
     },
+    actionsGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     actionButton: {
       flexDirection: 'row',
       alignItems: 'center',

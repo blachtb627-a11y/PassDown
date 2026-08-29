@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FlatList, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,6 +7,7 @@ import { RecipeCard } from '../components/RecipeCard';
 import { FilterChip } from '../components/FilterChip';
 import { EmptyState } from '../components/EmptyState';
 import { useAppState } from '../context/AppStateContext';
+import { CircleSummary, fetchCircleMembers, fetchMyCircles } from '../lib/api/circles';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { getCuisineColor } from '../theme/cuisineColors';
@@ -20,6 +21,29 @@ export function HomeFeedScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
+
+  const [circles, setCircles] = useState<CircleSummary[]>([]);
+  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
+  const [circleMemberIds, setCircleMemberIds] = useState<Record<string, Set<string>>>({});
+
+  useEffect(() => {
+    // Circles is a separate, best-effort feature here — if it fails to load, the feed
+    // itself should still work fine with no filter chips shown.
+    fetchMyCircles()
+      .then(setCircles)
+      .catch(() => setCircles([]));
+  }, []);
+
+  const handleSelectCircle = (circleId: string) => {
+    setSelectedCircleId((prev) => (prev === circleId ? null : circleId));
+    if (!circleMemberIds[circleId]) {
+      fetchCircleMembers(circleId)
+        .then((members) => {
+          setCircleMemberIds((prev) => ({ ...prev, [circleId]: new Set(members.map((m) => m.id)) }));
+        })
+        .catch(() => {});
+    }
+  };
 
   const publishedRecipes = useMemo(() => recipes.filter((r) => !r.isDraft), [recipes]);
 
@@ -38,13 +62,15 @@ export function HomeFeedScreen() {
 
   const visibleRecipes = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const memberIds = selectedCircleId ? circleMemberIds[selectedCircleId] : null;
     return publishedRecipes.filter((r) => {
+      if (memberIds && !memberIds.has(r.author.id)) return false;
       if (selectedCuisine && r.cuisine !== selectedCuisine) return false;
       if (!q) return true;
       const haystack = [r.title, r.cuisine ?? '', ...r.ingredients.map((i) => i.item)].join(' ').toLowerCase();
       return haystack.includes(q);
     });
-  }, [publishedRecipes, query, selectedCuisine]);
+  }, [publishedRecipes, query, selectedCuisine, selectedCircleId, circleMemberIds]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,7 +78,7 @@ export function HomeFeedScreen() {
         <View style={styles.bannerTop}>
           <View style={styles.brandRow}>
             <Image source={require('../../assets/logo.png')} style={styles.logoMark} accessibilityIgnoresInvertColors />
-            <Text style={styles.brandText}>PassDown</Text>
+            <Text style={[typography.wordmark, styles.brandText]}>Passed Down</Text>
           </View>
           <View style={styles.bannerIcons}>
             <Pressable
@@ -66,6 +92,28 @@ export function HomeFeedScreen() {
             <Ionicons name="notifications-outline" size={24} color={colors.onHeaderBanner} accessibilityLabel="Notifications" />
           </View>
         </View>
+
+        {circles.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.circleChipsRow}>
+            {circles.map((circle) => {
+              const selected = selectedCircleId === circle.id;
+              return (
+                <Pressable
+                  key={circle.id}
+                  onPress={() => handleSelectCircle(circle.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={circle.name}
+                  style={[styles.circleChip, selected && styles.circleChipSelected]}
+                >
+                  <Text style={[typography.bodyBold, styles.circleChipText, selected && styles.circleChipTextSelected]} numberOfLines={1}>
+                    {circle.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
 
         <View style={styles.searchBarWrapper}>
           <Ionicons name="search" size={20} color={colors.textMuted} />
@@ -84,8 +132,6 @@ export function HomeFeedScreen() {
         <FlatList
           data={visibleRecipes}
           keyExtractor={(item) => item.id}
-          numColumns={2}
-          columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.listContent}
           initialNumToRender={6}
           maxToRenderPerBatch={6}
@@ -157,7 +203,20 @@ function createStyles(colors: AppColors) {
     brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     bannerIcons: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     logoMark: { width: 30, height: 30 },
-    brandText: { fontSize: 24, fontWeight: '700', color: colors.onHeaderBanner },
+    brandText: { color: colors.onHeaderBanner },
+    circleChipsRow: { flexGrow: 0, marginTop: spacing.md },
+    circleChip: {
+      paddingHorizontal: spacing.md,
+      minHeight: 40,
+      justifyContent: 'center',
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.onHeaderBanner,
+      marginRight: spacing.sm,
+    },
+    circleChipSelected: { backgroundColor: colors.onHeaderBanner },
+    circleChipText: { color: colors.onHeaderBanner },
+    circleChipTextSelected: { color: colors.headerBanner },
     searchBarWrapper: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -169,11 +228,11 @@ function createStyles(colors: AppColors) {
       backgroundColor: colors.surface,
     },
     searchInput: { flex: 1, color: colors.text, paddingVertical: spacing.sm },
-    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, paddingTop: spacing.md },
-    columnWrapper: { gap: spacing.sm, paddingHorizontal: spacing.md },
+    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingTop: spacing.md, paddingBottom: spacing.xs },
     listContent: {
+      paddingHorizontal: spacing.md,
       paddingBottom: spacing.xl,
-      gap: spacing.sm,
+      gap: spacing.md,
     },
   });
 }
