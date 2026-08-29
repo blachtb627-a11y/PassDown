@@ -17,7 +17,6 @@ import { FollowListScreen } from '../screens/FollowListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AdminPortalScreen } from '../screens/AdminPortalScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
-import { RecipeBoxScreen } from '../screens/RecipeBoxScreen';
 import { CircleDetailScreen } from '../screens/CircleDetailScreen';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -65,7 +64,6 @@ export function RootNavigator() {
             component={EditProfileScreen}
             options={{ presentation: 'modal', title: 'Edit Profile' }}
           />
-          <Stack.Screen name="RecipeBox" component={RecipeBoxScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="CircleDetail"
             component={CircleDetailScreen}

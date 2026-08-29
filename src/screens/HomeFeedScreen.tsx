@@ -81,14 +81,6 @@ export function HomeFeedScreen() {
             <Text style={[typography.wordmark, styles.brandText]}>Passed Down</Text>
           </View>
           <View style={styles.bannerIcons}>
-            <Pressable
-              onPress={() => navigation.navigate('RecipeBox')}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Recipe Box"
-            >
-              <Ionicons name="file-tray-full-outline" size={24} color={colors.onHeaderBanner} />
-            </Pressable>
             <Ionicons name="notifications-outline" size={24} color={colors.onHeaderBanner} accessibilityLabel="Notifications" />
           </View>
         </View>

@@ -14,7 +14,6 @@ export type RootStackParamList = {
   Settings: undefined;
   AdminPortal: undefined;
   EditProfile: undefined;
-  RecipeBox: undefined;
   CircleDetail: { circleId: string; name: string };
 };
 

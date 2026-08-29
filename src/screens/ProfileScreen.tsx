@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,17 +9,21 @@ import { fetchProfileWithCounts } from '../lib/api/social';
 import { fetchRecipesByAuthor } from '../lib/api/recipes';
 import { Author, Recipe } from '../types/recipe';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { FilterChip } from '../components/FilterChip';
 import { EmptyState } from '../components/EmptyState';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
-import { radius, spacing } from '../theme/typography';
+import { AppTypography, radius, spacing } from '../theme/typography';
+
+const ALL_SAVED = 'all-saved';
+type ProfileTab = 'yours' | 'saved';
 
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute();
-  const { recipes, followedAuthorIds, toggleFollowAuthor, currentUser } = useAppState();
+  const { recipes, savedRecipeIds, collections, createCollection, followedAuthorIds, toggleFollowAuthor, currentUser } = useAppState();
   const { colors, typography } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const routeUserId = (route.params as { userId?: string } | undefined)?.userId;
   const isOwnProfile = !routeUserId || routeUserId === currentUser.id;
   const userId = isOwnProfile ? currentUser.id : routeUserId!;
@@ -27,6 +31,8 @@ export function ProfileScreen() {
   const [otherProfile, setOtherProfile] = useState<Author | null>(null);
   const [otherRecipes, setOtherRecipes] = useState<Recipe[]>([]);
   const [isLoadingOther, setIsLoadingOther] = useState(!isOwnProfile);
+  const [activeTab, setActiveTab] = useState<ProfileTab>('yours');
+  const [activeCollectionId, setActiveCollectionId] = useState<string>(ALL_SAVED);
 
   useEffect(() => {
     if (isOwnProfile) return;
@@ -50,6 +56,23 @@ export function ProfileScreen() {
   const profileAuthor = isOwnProfile ? currentUser : otherProfile;
   const authoredRecipes = isOwnProfile ? recipes.filter((r) => r.author.id === currentUser.id) : otherRecipes;
 
+  const savedRecipes = recipes.filter((r) => savedRecipeIds.includes(r.id));
+  const visibleSavedRecipes =
+    activeCollectionId === ALL_SAVED
+      ? savedRecipes
+      : savedRecipes.filter((r) => collections.find((c) => c.id === activeCollectionId)?.recipeIds.includes(r.id));
+
+  const handleNewCollection = () => {
+    if (Platform.OS === 'ios') {
+      Alert.prompt('New Collection', 'Name your new collection (e.g., "Christmas", "Quick Dinners")', (name) => {
+        if (name && name.trim()) createCollection(name.trim());
+      });
+      return;
+    }
+    const untitledCount = collections.filter((c) => c.name.startsWith('Untitled Collection')).length;
+    createCollection(untitledCount === 0 ? 'Untitled Collection' : `Untitled Collection ${untitledCount + 1}`);
+  };
+
   if (!isOwnProfile && isLoadingOther) {
     return (
       <SafeAreaView style={[styles.container, styles.centered]}>
@@ -63,11 +86,12 @@ export function ProfileScreen() {
   }
 
   const isFollowing = followedAuthorIds.includes(profileAuthor.id);
+  const visibleRecipes = isOwnProfile && activeTab === 'saved' ? visibleSavedRecipes : authoredRecipes;
 
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={authoredRecipes}
+        data={visibleRecipes}
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={{ gap: spacing.md, paddingHorizontal: spacing.md }}
@@ -80,14 +104,24 @@ export function ProfileScreen() {
             <View style={styles.headerTop}>
               <Text style={typography.display}>{isOwnProfile ? 'Profile' : profileAuthor.name}</Text>
               {isOwnProfile ? (
-                <Pressable
-                  onPress={() => navigation.navigate('Settings')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Settings"
-                  style={styles.settingsButton}
-                >
-                  <Ionicons name="settings-outline" size={24} color={colors.secondary} />
-                </Pressable>
+                <View style={styles.headerActions}>
+                  <Pressable
+                    onPress={() => navigation.navigate('ShoppingList')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Shopping List"
+                    style={styles.settingsButton}
+                  >
+                    <Ionicons name="cart-outline" size={24} color={colors.secondary} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => navigation.navigate('Settings')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Settings"
+                    style={styles.settingsButton}
+                  >
+                    <Ionicons name="settings-outline" size={24} color={colors.secondary} />
+                  </Pressable>
+                </View>
               ) : null}
             </View>
 
@@ -142,15 +176,62 @@ export function ProfileScreen() {
               <PrimaryButton label="Edit Profile" variant="outline" onPress={() => navigation.navigate('EditProfile')} />
             )}
 
-            <Text style={[typography.subtitle, styles.recipesLabel]}>
-              {isOwnProfile ? 'Your Recipes' : `${profileAuthor.name}'s Recipes`}
-            </Text>
+            {isOwnProfile ? (
+              <View style={styles.tabRow}>
+                <Pressable
+                  style={[styles.tabButton, activeTab === 'yours' && styles.tabButtonActive]}
+                  onPress={() => setActiveTab('yours')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: activeTab === 'yours' }}
+                >
+                  <Text style={[typography.bodyBold, activeTab === 'yours' ? styles.tabTextActive : styles.tabTextInactive]}>
+                    Your Recipes
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.tabButton, activeTab === 'saved' && styles.tabButtonActive]}
+                  onPress={() => setActiveTab('saved')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: activeTab === 'saved' }}
+                >
+                  <Text style={[typography.bodyBold, activeTab === 'saved' ? styles.tabTextActive : styles.tabTextInactive]}>
+                    Saved
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={[typography.subtitle, styles.recipesLabel]}>{`${profileAuthor.name}'s Recipes`}</Text>
+            )}
+
+            {isOwnProfile && activeTab === 'saved' ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.collectionsRow}>
+                <FilterChip label="All Saved" selected={activeCollectionId === ALL_SAVED} onPress={() => setActiveCollectionId(ALL_SAVED)} />
+                {collections.map((c) => (
+                  <FilterChip
+                    key={c.id}
+                    label={c.name}
+                    selected={activeCollectionId === c.id}
+                    onPress={() => setActiveCollectionId(c.id)}
+                  />
+                ))}
+                <Pressable onPress={handleNewCollection} style={styles.newCollectionChip} accessibilityRole="button" accessibilityLabel="New Collection">
+                  <Ionicons name="add" size={18} color={colors.secondary} />
+                  <Text style={[typography.bodyBold, { color: colors.secondary }]}> New</Text>
+                </Pressable>
+              </ScrollView>
+            ) : null}
           </View>
         }
         ListEmptyComponent={
           <EmptyState
-            icon="restaurant-outline"
-            message={isOwnProfile ? 'No recipes posted yet — tap the "+" button to share your first one.' : 'No recipes posted yet.'}
+            icon={isOwnProfile && activeTab === 'saved' ? 'bookmark-outline' : 'restaurant-outline'}
+            message={
+              isOwnProfile && activeTab === 'saved'
+                ? 'No recipes saved yet — tap the "Save" button on any recipe to start your collection.'
+                : isOwnProfile
+                ? 'No recipes posted yet — tap the "+" button to share your first one.'
+                : 'No recipes posted yet.'
+            }
           />
         }
         renderItem={({ item }) => (
@@ -171,17 +252,43 @@ export function ProfileScreen() {
   );
 }
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors, typography: AppTypography) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     centered: { alignItems: 'center', justifyContent: 'center' },
     header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    headerActions: { flexDirection: 'row', alignItems: 'center' },
     settingsButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
     profileRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, alignItems: 'center' },
     avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.border },
     countsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
     recipesLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
+    tabRow: { flexDirection: 'row', marginTop: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
+    tabButton: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      minHeight: 44,
+      justifyContent: 'center',
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+    },
+    tabButtonActive: { borderBottomColor: colors.secondary },
+    tabTextActive: { color: colors.secondary },
+    tabTextInactive: { color: colors.textMuted },
+    collectionsRow: { flexGrow: 0, marginTop: spacing.md },
+    newCollectionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 44,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.secondary,
+      borderStyle: 'dashed',
+      marginRight: spacing.sm,
+    },
     gridItem: { flex: 1, gap: spacing.xs },
     gridPhoto: { width: '100%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: colors.border },
   });
