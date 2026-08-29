@@ -161,7 +161,7 @@ export function PostRecipeScreen() {
           {isLastStep ? (
             <>
               <PrimaryButton
-                label="Post Recipe"
+                label={existingRecipe ? 'Save Changes' : 'Post Recipe'}
                 icon="checkmark-circle-outline"
                 loading={isSubmitting}
                 onPress={() => handleSave(false)}

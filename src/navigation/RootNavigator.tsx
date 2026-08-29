@@ -46,7 +46,10 @@ export function RootNavigator() {
           <Stack.Screen
             name="PostRecipe"
             component={PostRecipeScreen}
-            options={{ presentation: 'modal', title: 'Post a Recipe' }}
+            options={({ route }) => ({
+              presentation: 'modal',
+              title: route.params?.recipeId ? 'Edit Recipe' : 'Post a Recipe',
+            })}
           />
           <Stack.Screen name="UserProfile" component={ProfileScreen} options={{ title: 'Profile' }} />
           <Stack.Screen

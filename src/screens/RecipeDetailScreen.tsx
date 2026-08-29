@@ -175,6 +175,13 @@ export function RecipeDetailScreen() {
           <>
             <View style={{ height: spacing.sm }} />
             <PrimaryButton
+              label="Edit Recipe"
+              icon="create-outline"
+              variant="outline"
+              onPress={() => navigation.navigate('PostRecipe', { recipeId: recipe.id })}
+            />
+            <View style={{ height: spacing.sm }} />
+            <PrimaryButton
               label="Delete Recipe"
               icon="trash-outline"
               variant="outline"
