@@ -3,6 +3,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   Share,
@@ -19,6 +20,8 @@ import { useAppState } from '../context/AppStateContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
 import { confirm, getErrorMessage, notify } from '../lib/alert';
+import { CircleSummary, fetchMyCircles } from '../lib/api/circles';
+import { fetchCirclesSharingRecipe, removeRecipeFromCircle, shareRecipeToCircle } from '../lib/api/circleRecipes';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
@@ -52,6 +55,48 @@ export function RecipeDetailScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const hasScrolledToComments = useRef(false);
+
+  const [isCircleModalOpen, setIsCircleModalOpen] = useState(false);
+  const [isLoadingCircles, setIsLoadingCircles] = useState(false);
+  const [myCircles, setMyCircles] = useState<CircleSummary[]>([]);
+  const [sharedCircleIds, setSharedCircleIds] = useState<Set<string>>(new Set());
+
+  const openCircleModal = () => {
+    setIsCircleModalOpen(true);
+    setIsLoadingCircles(true);
+    Promise.all([fetchMyCircles(), fetchCirclesSharingRecipe(recipeId)])
+      .then(([circles, sharedIds]) => {
+        setMyCircles(circles);
+        setSharedCircleIds(new Set(sharedIds));
+      })
+      .catch((error) => notify('Something went wrong', getErrorMessage(error, 'Could not load your circles.')))
+      .finally(() => setIsLoadingCircles(false));
+  };
+
+  const handleToggleCircle = async (circleId: string) => {
+    const isShared = sharedCircleIds.has(circleId);
+    setSharedCircleIds((prev) => {
+      const next = new Set(prev);
+      if (isShared) next.delete(circleId);
+      else next.add(circleId);
+      return next;
+    });
+    try {
+      if (isShared) {
+        await removeRecipeFromCircle(circleId, recipeId);
+      } else {
+        await shareRecipeToCircle(circleId, recipeId);
+      }
+    } catch (error) {
+      setSharedCircleIds((prev) => {
+        const next = new Set(prev);
+        if (isShared) next.add(circleId);
+        else next.delete(circleId);
+        return next;
+      });
+      notify('Something went wrong', getErrorMessage(error, 'Could not update this circle.'));
+    }
+  };
 
   if (!recipe) {
     return <EmptyState icon="alert-circle-outline" message="This recipe couldn't be found." />;
@@ -88,6 +133,7 @@ export function RecipeDetailScreen() {
   };
 
   return (
+    <>
     <ScrollView ref={scrollViewRef} style={styles.container} contentContainerStyle={styles.content}>
       <FlatList
         data={recipe.photos}
@@ -147,6 +193,15 @@ export function RecipeDetailScreen() {
           >
             <Ionicons name="share-outline" size={24} color={colors.text} />
             <Text style={typography.meta}>Share</Text>
+          </Pressable>
+          <Pressable
+            style={styles.actionBarButton}
+            onPress={openCircleModal}
+            accessibilityRole="button"
+            accessibilityLabel="Share to a Circle"
+          >
+            <Ionicons name="people-outline" size={24} color={colors.text} />
+            <Text style={typography.meta}>Circle</Text>
           </Pressable>
         </View>
       </View>
@@ -308,6 +363,40 @@ export function RecipeDetailScreen() {
         )}
       </View>
     </ScrollView>
+
+    <Modal visible={isCircleModalOpen} transparent animationType="fade" onRequestClose={() => setIsCircleModalOpen(false)}>
+      <Pressable style={styles.modalOverlay} onPress={() => setIsCircleModalOpen(false)}>
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Text style={[typography.subtitle, styles.modalTitle]}>Share to a Circle</Text>
+          {isLoadingCircles ? (
+            <Text style={typography.body}>Loading...</Text>
+          ) : myCircles.length === 0 ? (
+            <Text style={[typography.body, styles.modalHint]}>
+              You're not in any circles yet — create one from the Circles tab first.
+            </Text>
+          ) : (
+            myCircles.map((circle) => {
+              const isShared = sharedCircleIds.has(circle.id);
+              return (
+                <Pressable
+                  key={circle.id}
+                  style={styles.circleOptionRow}
+                  onPress={() => handleToggleCircle(circle.id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isShared }}
+                >
+                  <Ionicons name={isShared ? 'checkbox' : 'square-outline'} size={22} color={isShared ? colors.secondary : colors.textMuted} />
+                  <Text style={typography.body}> {circle.name}</Text>
+                </Pressable>
+              );
+            })
+          )}
+          <View style={{ height: spacing.md }} />
+          <PrimaryButton label="Done" variant="outline" onPress={() => setIsCircleModalOpen(false)} />
+        </Pressable>
+      </Pressable>
+    </Modal>
+    </>
   );
 }
 
@@ -383,5 +472,22 @@ function createStyles(colors: AppColors, typography: AppTypography) {
   },
   madeThisPhoto: { width: 56, height: 56, borderRadius: radius.sm, backgroundColor: colors.border },
   commentRow: { marginTop: spacing.md },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  modalTitle: { marginBottom: spacing.md },
+  modalHint: { color: colors.textMuted, marginBottom: spacing.sm },
+  circleOptionRow: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   });
 }

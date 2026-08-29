@@ -2,7 +2,7 @@ import { supabase } from '../supabase';
 import { Recipe } from '../../types/recipe';
 import { mapRecipe, RecipeRowWithRelations } from './mappers';
 
-const RECIPE_SELECT = `
+export const RECIPE_SELECT = `
   *,
   author:profiles!recipes_author_id_fkey(id, full_name, username, avatar_url, bio),
   comments(id, text, created_at, author:profiles!comments_author_id_fkey(id, full_name, username, avatar_url, bio)),

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,6 +13,7 @@ import {
   fetchCircleMembers,
   removeCircleMember,
 } from '../lib/api/circles';
+import { fetchCircleRecipes, removeRecipeFromCircle, shareRecipeToCircle } from '../lib/api/circleRecipes';
 import { searchUsers } from '../lib/api/social';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
@@ -20,13 +21,13 @@ import { confirm, getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
-import { Author } from '../types/recipe';
+import { Author, Recipe } from '../types/recipe';
 
 export function CircleDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'CircleDetail'>>();
   const { circleId } = route.params;
-  const { currentUser } = useAppState();
+  const { currentUser, recipes } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
@@ -40,12 +41,20 @@ export function CircleDetailScreen() {
   const [searchResults, setSearchResults] = useState<Author[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  const [sharedRecipes, setSharedRecipes] = useState<Recipe[]>([]);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
   const load = async () => {
     setIsLoading(true);
     try {
-      const [circle, memberList] = await Promise.all([fetchCircle(circleId), fetchCircleMembers(circleId)]);
+      const [circle, memberList, recipeList] = await Promise.all([
+        fetchCircle(circleId),
+        fetchCircleMembers(circleId),
+        fetchCircleRecipes(circleId),
+      ]);
       setIsOwner(circle?.createdBy === currentUser.id);
       setMembers(memberList);
+      setSharedRecipes(recipeList);
     } catch (error) {
       notify('Something went wrong', getErrorMessage(error, 'Could not load this circle.'));
     } finally {
@@ -104,6 +113,24 @@ export function CircleDetailScreen() {
     }
   };
 
+  const sharedRecipeIds = new Set(sharedRecipes.map((r) => r.id));
+  const myOwnRecipes = recipes.filter((r) => r.author.id === currentUser.id && !r.isDraft);
+
+  const handleToggleShare = async (recipe: Recipe) => {
+    const isShared = sharedRecipeIds.has(recipe.id);
+    setSharedRecipes((prev) => (isShared ? prev.filter((r) => r.id !== recipe.id) : [recipe, ...prev]));
+    try {
+      if (isShared) {
+        await removeRecipeFromCircle(circleId, recipe.id);
+      } else {
+        await shareRecipeToCircle(circleId, recipe.id);
+      }
+    } catch (error) {
+      setSharedRecipes((prev) => (isShared ? [recipe, ...prev] : prev.filter((r) => r.id !== recipe.id)));
+      notify('Something went wrong', getErrorMessage(error, 'Could not update this recipe.'));
+    }
+  };
+
   const handleLeaveOrDelete = async () => {
     const ok = await confirm({
       title: isOwner ? 'Delete this circle?' : 'Leave this circle?',
@@ -143,6 +170,31 @@ export function CircleDetailScreen() {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <>
+            <View style={styles.recipesHeaderRow}>
+              <Text style={typography.subtitle}>Shared Recipes</Text>
+              <PrimaryButton label="Share a Recipe" variant="outline" fullWidth={false} onPress={() => setIsShareModalOpen(true)} />
+            </View>
+            {sharedRecipes.length === 0 ? (
+              <EmptyState icon="restaurant-outline" message="No recipes shared yet — tap “Share a Recipe” to add one of yours." />
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipesRow}>
+                {sharedRecipes.map((recipe) => (
+                  <Pressable
+                    key={recipe.id}
+                    style={styles.recipeTile}
+                    onPress={() => navigation.navigate('RecipeDetail', { recipeId: recipe.id })}
+                    accessibilityRole="button"
+                    accessibilityLabel={recipe.title}
+                  >
+                    <Image source={{ uri: recipe.photos[0] }} style={styles.recipeTilePhoto} />
+                    <Text style={typography.meta} numberOfLines={2}>
+                      {recipe.title}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+
             <Text style={[typography.subtitle, styles.sectionTitle]}>
               {members.length} member{members.length === 1 ? '' : 's'}
             </Text>
@@ -216,6 +268,42 @@ export function CircleDetailScreen() {
         }
         ListEmptyComponent={<EmptyState icon="people-outline" message="No members yet." />}
       />
+
+      <Modal visible={isShareModalOpen} transparent animationType="fade" onRequestClose={() => setIsShareModalOpen(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setIsShareModalOpen(false)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={[typography.subtitle, styles.modalTitle]}>Share a Recipe</Text>
+            {myOwnRecipes.length === 0 ? (
+              <Text style={[typography.body, styles.modalHint]}>
+                You haven't posted any recipes yet — post one first, then share it here.
+              </Text>
+            ) : (
+              <ScrollView style={{ maxHeight: 320 }}>
+                {myOwnRecipes.map((recipe) => {
+                  const isShared = sharedRecipeIds.has(recipe.id);
+                  return (
+                    <Pressable
+                      key={recipe.id}
+                      style={styles.recipeOptionRow}
+                      onPress={() => handleToggleShare(recipe)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isShared }}
+                    >
+                      <Ionicons name={isShared ? 'checkbox' : 'square-outline'} size={22} color={isShared ? colors.secondary : colors.textMuted} />
+                      <Text style={typography.body} numberOfLines={1}>
+                        {' '}
+                        {recipe.title}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+            <View style={{ height: spacing.md }} />
+            <PrimaryButton label="Done" variant="outline" onPress={() => setIsShareModalOpen(false)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -249,5 +337,32 @@ function createStyles(colors: AppColors, typography: AppTypography) {
     },
     footer: { marginTop: spacing.md },
     leaveButtonWrapper: { marginTop: spacing.lg },
+    recipesHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    recipesRow: { flexGrow: 0, marginBottom: spacing.sm },
+    recipeTile: { width: 110, marginRight: spacing.sm, gap: spacing.xs },
+    recipeTilePhoto: { width: 110, height: 110, borderRadius: radius.md, backgroundColor: colors.border },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.lg,
+    },
+    modalCard: {
+      width: '100%',
+      maxWidth: 360,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+    },
+    modalTitle: { marginBottom: spacing.md },
+    modalHint: { color: colors.textMuted, marginBottom: spacing.sm },
+    recipeOptionRow: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   });
 }

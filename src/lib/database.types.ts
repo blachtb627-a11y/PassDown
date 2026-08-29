@@ -109,6 +109,49 @@ export type Database = {
           },
         ]
       }
+      circle_recipes: {
+        Row: {
+          added_at: string
+          added_by: string
+          circle_id: string
+          recipe_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string
+          circle_id: string
+          recipe_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          circle_id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circle_recipes_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_recipes_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_recipes_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_recipes: {
         Row: {
           collection_id: string
