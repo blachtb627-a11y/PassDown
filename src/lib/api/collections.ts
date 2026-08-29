@@ -23,6 +23,18 @@ export async function createCollection(userId: string, name: string): Promise<Co
   return mapCollection(data, []);
 }
 
+export async function renameCollection(collectionId: string, name: string): Promise<void> {
+  const { error } = await supabase.from('collections').update({ name }).eq('id', collectionId);
+  if (error) throw error;
+}
+
+export async function deleteCollection(collectionId: string): Promise<void> {
+  const { error: recipesError } = await supabase.from('collection_recipes').delete().eq('collection_id', collectionId);
+  if (recipesError) throw recipesError;
+  const { error } = await supabase.from('collections').delete().eq('id', collectionId);
+  if (error) throw error;
+}
+
 export async function addRecipeToCollection(collectionId: string, recipeId: string): Promise<void> {
   const { error } = await supabase
     .from('collection_recipes')

@@ -1,5 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,21 +19,35 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
 import { fetchProfileWithCounts } from '../lib/api/social';
 import { fetchRecipesByAuthor } from '../lib/api/recipes';
-import { Author, Recipe } from '../types/recipe';
+import { Author, Collection, Recipe } from '../types/recipe';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { FilterChip } from '../components/FilterChip';
 import { EmptyState } from '../components/EmptyState';
+import { confirm, getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
 
 const ALL_SAVED = 'all-saved';
 type ProfileTab = 'yours' | 'saved';
+type NameModalState = { mode: 'create' | 'rename'; collectionId?: string; value: string };
 
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute();
-  const { recipes, savedRecipeIds, collections, createCollection, followedAuthorIds, toggleFollowAuthor, currentUser } = useAppState();
+  const {
+    recipes,
+    savedRecipeIds,
+    collections,
+    createCollection,
+    renameCollection,
+    deleteCollection,
+    addRecipeToCollection,
+    removeRecipeFromCollection,
+    followedAuthorIds,
+    toggleFollowAuthor,
+    currentUser,
+  } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const routeUserId = (route.params as { userId?: string } | undefined)?.userId;
@@ -33,6 +59,9 @@ export function ProfileScreen() {
   const [isLoadingOther, setIsLoadingOther] = useState(!isOwnProfile);
   const [activeTab, setActiveTab] = useState<ProfileTab>('yours');
   const [activeCollectionId, setActiveCollectionId] = useState<string>(ALL_SAVED);
+  const [nameModal, setNameModal] = useState<NameModalState | null>(null);
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [assignRecipeId, setAssignRecipeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOwnProfile) return;
@@ -62,15 +91,58 @@ export function ProfileScreen() {
       ? savedRecipes
       : savedRecipes.filter((r) => collections.find((c) => c.id === activeCollectionId)?.recipeIds.includes(r.id));
 
-  const handleNewCollection = () => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt('New Collection', 'Name your new collection (e.g., "Christmas", "Quick Dinners")', (name) => {
-        if (name && name.trim()) createCollection(name.trim());
-      });
-      return;
+  const openEditCollection = (collection: Collection) =>
+    setNameModal({ mode: 'rename', collectionId: collection.id, value: collection.name });
+
+  const handleSaveName = async () => {
+    if (!nameModal) return;
+    const name = nameModal.value.trim();
+    if (!name) return;
+    setIsSavingName(true);
+    try {
+      if (nameModal.mode === 'create') {
+        await createCollection(name);
+      } else if (nameModal.collectionId) {
+        await renameCollection(nameModal.collectionId, name);
+      }
+      setNameModal(null);
+    } catch (error) {
+      notify('Something went wrong', getErrorMessage(error, 'Could not save this collection.'));
+    } finally {
+      setIsSavingName(false);
     }
-    const untitledCount = collections.filter((c) => c.name.startsWith('Untitled Collection')).length;
-    createCollection(untitledCount === 0 ? 'Untitled Collection' : `Untitled Collection ${untitledCount + 1}`);
+  };
+
+  const handleDeleteCollection = async () => {
+    if (!nameModal?.collectionId) return;
+    const ok = await confirm({
+      title: 'Delete this collection?',
+      message: 'Recipes in it stay saved — they just won’t be grouped here anymore.',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    setIsSavingName(true);
+    try {
+      await deleteCollection(nameModal.collectionId);
+      setActiveCollectionId((prev) => (prev === nameModal.collectionId ? ALL_SAVED : prev));
+      setNameModal(null);
+    } catch (error) {
+      notify('Could not delete collection', getErrorMessage(error, 'Please try again.'));
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleToggleAssign = async (collectionId: string, recipeId: string, isIn: boolean) => {
+    try {
+      if (isIn) {
+        await removeRecipeFromCollection(collectionId, recipeId);
+      } else {
+        await addRecipeToCollection(collectionId, recipeId);
+      }
+    } catch (error) {
+      notify('Something went wrong', getErrorMessage(error, 'Could not update this collection.'));
+    }
   };
 
   if (!isOwnProfile && isLoadingOther) {
@@ -86,7 +158,8 @@ export function ProfileScreen() {
   }
 
   const isFollowing = followedAuthorIds.includes(profileAuthor.id);
-  const visibleRecipes = isOwnProfile && activeTab === 'saved' ? visibleSavedRecipes : authoredRecipes;
+  const isSavedTab = isOwnProfile && activeTab === 'saved';
+  const visibleRecipes = isSavedTab ? visibleSavedRecipes : authoredRecipes;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -203,18 +276,41 @@ export function ProfileScreen() {
               <Text style={[typography.subtitle, styles.recipesLabel]}>{`${profileAuthor.name}'s Recipes`}</Text>
             )}
 
-            {isOwnProfile && activeTab === 'saved' ? (
+            {isSavedTab ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.collectionsRow}>
                 <FilterChip label="All Saved" selected={activeCollectionId === ALL_SAVED} onPress={() => setActiveCollectionId(ALL_SAVED)} />
-                {collections.map((c) => (
-                  <FilterChip
-                    key={c.id}
-                    label={c.name}
-                    selected={activeCollectionId === c.id}
-                    onPress={() => setActiveCollectionId(c.id)}
-                  />
-                ))}
-                <Pressable onPress={handleNewCollection} style={styles.newCollectionChip} accessibilityRole="button" accessibilityLabel="New Collection">
+                {collections.map((c) => {
+                  const selected = activeCollectionId === c.id;
+                  return (
+                    <View key={c.id} style={[styles.collectionChip, selected && styles.collectionChipSelected]}>
+                      <Pressable
+                        onPress={() => setActiveCollectionId(c.id)}
+                        style={styles.collectionChipLabel}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={c.name}
+                      >
+                        <Text style={[typography.bodyBold, { color: selected ? colors.white : colors.secondary }]} numberOfLines={1}>
+                          {c.name}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => openEditCollection(c)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit ${c.name}`}
+                      >
+                        <Ionicons name="pencil" size={14} color={selected ? colors.white : colors.secondary} />
+                      </Pressable>
+                    </View>
+                  );
+                })}
+                <Pressable
+                  onPress={() => setNameModal({ mode: 'create', value: '' })}
+                  style={styles.newCollectionChip}
+                  accessibilityRole="button"
+                  accessibilityLabel="New Collection"
+                >
                   <Ionicons name="add" size={18} color={colors.secondary} />
                   <Text style={[typography.bodyBold, { color: colors.secondary }]}> New</Text>
                 </Pressable>
@@ -224,9 +320,9 @@ export function ProfileScreen() {
         }
         ListEmptyComponent={
           <EmptyState
-            icon={isOwnProfile && activeTab === 'saved' ? 'bookmark-outline' : 'restaurant-outline'}
+            icon={isSavedTab ? 'bookmark-outline' : 'restaurant-outline'}
             message={
-              isOwnProfile && activeTab === 'saved'
+              isSavedTab
                 ? 'No recipes saved yet — tap the "Save" button on any recipe to start your collection.'
                 : isOwnProfile
                 ? 'No recipes posted yet — tap the "+" button to share your first one.'
@@ -241,13 +337,96 @@ export function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel={item.title}
           >
-            <Image source={{ uri: item.photos[0] }} style={styles.gridPhoto} />
+            <View style={styles.gridPhotoWrapper}>
+              <Image source={{ uri: item.photos[0] }} style={styles.gridPhoto} />
+              {isSavedTab ? (
+                <Pressable
+                  onPress={() => setAssignRecipeId(item.id)}
+                  hitSlop={6}
+                  style={styles.collectionButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add to collection"
+                >
+                  <Ionicons name="folder-outline" size={16} color={colors.white} />
+                </Pressable>
+              ) : null}
+            </View>
             <Text style={typography.bodyBold} numberOfLines={2}>
               {item.title}
             </Text>
           </Pressable>
         )}
       />
+
+      <Modal visible={!!nameModal} transparent animationType="fade" onRequestClose={() => setNameModal(null)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setNameModal(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={[typography.subtitle, styles.modalTitle]}>
+              {nameModal?.mode === 'create' ? 'New Collection' : 'Rename Collection'}
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder='e.g., "Christmas", "Quick Dinners"'
+              placeholderTextColor={colors.textMuted}
+              value={nameModal?.value ?? ''}
+              onChangeText={(v) => setNameModal((prev) => (prev ? { ...prev, value: v } : prev))}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleSaveName}
+            />
+            <View style={{ height: spacing.sm }} />
+            <PrimaryButton
+              label={nameModal?.mode === 'create' ? 'Create' : 'Save'}
+              disabled={!nameModal?.value.trim()}
+              loading={isSavingName}
+              onPress={handleSaveName}
+            />
+            {nameModal?.mode === 'rename' ? (
+              <>
+                <View style={{ height: spacing.sm }} />
+                <PrimaryButton
+                  label="Delete Collection"
+                  variant="outline"
+                  icon="trash-outline"
+                  loading={isSavingName}
+                  onPress={handleDeleteCollection}
+                />
+              </>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={!!assignRecipeId} transparent animationType="fade" onRequestClose={() => setAssignRecipeId(null)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setAssignRecipeId(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={[typography.subtitle, styles.modalTitle]}>Add to Collection</Text>
+            {collections.length === 0 ? (
+              <Text style={[typography.body, styles.modalHint]}>
+                You don't have any collections yet — tap "New" in the Saved tab's filter row to create one.
+              </Text>
+            ) : (
+              collections.map((c) => {
+                const isIn = assignRecipeId ? c.recipeIds.includes(assignRecipeId) : false;
+                return (
+                  <Pressable
+                    key={c.id}
+                    style={styles.collectionOptionRow}
+                    onPress={() => assignRecipeId && handleToggleAssign(c.id, assignRecipeId, isIn)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isIn }}
+                  >
+                    <Ionicons name={isIn ? 'checkbox' : 'square-outline'} size={22} color={isIn ? colors.secondary : colors.textMuted} />
+                    <Text style={typography.body}> {c.name}</Text>
+                  </Pressable>
+                );
+              })
+            )}
+            <View style={{ height: spacing.md }} />
+            <PrimaryButton label="Done" variant="outline" onPress={() => setAssignRecipeId(null)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -278,6 +457,21 @@ function createStyles(colors: AppColors, typography: AppTypography) {
     tabTextActive: { color: colors.secondary },
     tabTextInactive: { color: colors.textMuted },
     collectionsRow: { flexGrow: 0, marginTop: spacing.md },
+    collectionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      minHeight: 44,
+      paddingLeft: spacing.md,
+      paddingRight: spacing.sm,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.secondary,
+      marginRight: spacing.sm,
+      backgroundColor: colors.surface,
+    },
+    collectionChipSelected: { backgroundColor: colors.secondary },
+    collectionChipLabel: { maxWidth: 160 },
     newCollectionChip: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -290,6 +484,48 @@ function createStyles(colors: AppColors, typography: AppTypography) {
       marginRight: spacing.sm,
     },
     gridItem: { flex: 1, gap: spacing.xs },
+    gridPhotoWrapper: { position: 'relative' },
     gridPhoto: { width: '100%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: colors.border },
+    collectionButton: {
+      position: 'absolute',
+      top: spacing.xs,
+      right: spacing.xs,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.lg,
+    },
+    modalCard: {
+      width: '100%',
+      maxWidth: 360,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+    },
+    modalTitle: { marginBottom: spacing.md },
+    modalHint: { color: colors.textMuted, marginBottom: spacing.sm },
+    modalInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      minHeight: 48,
+      backgroundColor: colors.background,
+      ...typography.body,
+    },
+    collectionOptionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 44,
+    },
   });
 }

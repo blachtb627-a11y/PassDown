@@ -20,7 +20,14 @@ import {
   updateProfile as apiUpdateProfile,
   ProfileUpdateInput,
 } from '../lib/api/social';
-import { createCollection as apiCreateCollection, fetchCollections } from '../lib/api/collections';
+import {
+  addRecipeToCollection as apiAddRecipeToCollection,
+  createCollection as apiCreateCollection,
+  deleteCollection as apiDeleteCollection,
+  fetchCollections,
+  removeRecipeFromCollection as apiRemoveRecipeFromCollection,
+  renameCollection as apiRenameCollection,
+} from '../lib/api/collections';
 import {
   addRecipeIngredientsToShoppingList as apiAddRecipeIngredientsToShoppingList,
   clearCheckedShoppingListItems as apiClearCheckedShoppingListItems,
@@ -83,6 +90,10 @@ type AppStateContextValue = {
   toggleLikeRecipe: (recipeId: string) => void;
   toggleFollowAuthor: (authorId: string) => void;
   createCollection: (name: string) => Promise<void>;
+  renameCollection: (collectionId: string, name: string) => Promise<void>;
+  deleteCollection: (collectionId: string) => Promise<void>;
+  addRecipeToCollection: (collectionId: string, recipeId: string) => Promise<void>;
+  removeRecipeFromCollection: (collectionId: string, recipeId: string) => Promise<void>;
   addRecipeIngredientsToShoppingList: (recipe: Recipe) => Promise<void>;
   toggleShoppingListItem: (itemId: string) => void;
   clearCheckedShoppingListItems: () => void;
@@ -223,11 +234,45 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     };
 
     const createCollection = async (name: string) => {
+      const collection = await apiCreateCollection(currentUser.id, name);
+      setCollections((prev) => [...prev, collection]);
+    };
+
+    const renameCollection = async (collectionId: string, name: string) => {
+      await apiRenameCollection(collectionId, name);
+      setCollections((prev) => prev.map((c) => (c.id === collectionId ? { ...c, name } : c)));
+    };
+
+    const deleteCollection = async (collectionId: string) => {
+      await apiDeleteCollection(collectionId);
+      setCollections((prev) => prev.filter((c) => c.id !== collectionId));
+    };
+
+    const addRecipeToCollection = async (collectionId: string, recipeId: string) => {
+      setCollections((prev) =>
+        prev.map((c) => (c.id === collectionId && !c.recipeIds.includes(recipeId) ? { ...c, recipeIds: [...c.recipeIds, recipeId] } : c))
+      );
       try {
-        const collection = await apiCreateCollection(currentUser.id, name);
-        setCollections((prev) => [...prev, collection]);
+        await apiAddRecipeToCollection(collectionId, recipeId);
       } catch (error) {
-        console.error('Failed to create collection', error);
+        setCollections((prev) =>
+          prev.map((c) => (c.id === collectionId ? { ...c, recipeIds: c.recipeIds.filter((id) => id !== recipeId) } : c))
+        );
+        throw error;
+      }
+    };
+
+    const removeRecipeFromCollection = async (collectionId: string, recipeId: string) => {
+      setCollections((prev) =>
+        prev.map((c) => (c.id === collectionId ? { ...c, recipeIds: c.recipeIds.filter((id) => id !== recipeId) } : c))
+      );
+      try {
+        await apiRemoveRecipeFromCollection(collectionId, recipeId);
+      } catch (error) {
+        setCollections((prev) =>
+          prev.map((c) => (c.id === collectionId && !c.recipeIds.includes(recipeId) ? { ...c, recipeIds: [...c.recipeIds, recipeId] } : c))
+        );
+        throw error;
       }
     };
 
@@ -323,6 +368,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleLikeRecipe,
       toggleFollowAuthor,
       createCollection,
+      renameCollection,
+      deleteCollection,
+      addRecipeToCollection,
+      removeRecipeFromCollection,
       addRecipeIngredientsToShoppingList,
       toggleShoppingListItem,
       clearCheckedShoppingListItems,
