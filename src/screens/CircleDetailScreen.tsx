@@ -114,7 +114,7 @@ export function CircleDetailScreen() {
   };
 
   const sharedRecipeIds = new Set(sharedRecipes.map((r) => r.id));
-  const myOwnRecipes = recipes.filter((r) => r.author.id === currentUser.id && !r.isDraft);
+  const shareableRecipes = recipes.filter((r) => !r.isDraft);
 
   const handleToggleShare = async (recipe: Recipe) => {
     const isShared = sharedRecipeIds.has(recipe.id);
@@ -273,13 +273,11 @@ export function CircleDetailScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setIsShareModalOpen(false)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <Text style={[typography.subtitle, styles.modalTitle]}>Share a Recipe</Text>
-            {myOwnRecipes.length === 0 ? (
-              <Text style={[typography.body, styles.modalHint]}>
-                You haven't posted any recipes yet — post one first, then share it here.
-              </Text>
+            {shareableRecipes.length === 0 ? (
+              <Text style={[typography.body, styles.modalHint]}>No recipes to share yet.</Text>
             ) : (
               <ScrollView style={{ maxHeight: 320 }}>
-                {myOwnRecipes.map((recipe) => {
+                {shareableRecipes.map((recipe) => {
                   const isShared = sharedRecipeIds.has(recipe.id);
                   return (
                     <Pressable
@@ -290,10 +288,15 @@ export function CircleDetailScreen() {
                       accessibilityState={{ checked: isShared }}
                     >
                       <Ionicons name={isShared ? 'checkbox' : 'square-outline'} size={22} color={isShared ? colors.secondary : colors.textMuted} />
-                      <Text style={typography.body} numberOfLines={1}>
-                        {' '}
-                        {recipe.title}
-                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={typography.body} numberOfLines={1}>
+                          {' '}
+                          {recipe.title}
+                        </Text>
+                        <Text style={[typography.meta, { marginLeft: spacing.md }]} numberOfLines={1}>
+                          by {recipe.author.name}
+                        </Text>
+                      </View>
                     </Pressable>
                   );
                 })}
