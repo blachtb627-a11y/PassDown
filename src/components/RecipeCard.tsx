@@ -104,6 +104,8 @@ function createStyles(colors: AppColors) {
       width: '100%',
       aspectRatio: 1,
       backgroundColor: colors.border,
+      borderTopLeftRadius: radius.lg,
+      borderTopRightRadius: radius.lg,
     },
     placeholderPhoto: { alignItems: 'center', justifyContent: 'center' },
     cuisineBadge: {
