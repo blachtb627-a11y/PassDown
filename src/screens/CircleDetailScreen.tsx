@@ -27,7 +27,7 @@ export function CircleDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'CircleDetail'>>();
   const { circleId } = route.params;
-  const { currentUser, recipes } = useAppState();
+  const { currentUser, recipes, savedRecipeIds } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
@@ -43,6 +43,7 @@ export function CircleDetailScreen() {
 
   const [sharedRecipes, setSharedRecipes] = useState<Recipe[]>([]);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareSearchQuery, setShareSearchQuery] = useState('');
 
   const load = async () => {
     setIsLoading(true);
@@ -114,7 +115,10 @@ export function CircleDetailScreen() {
   };
 
   const sharedRecipeIds = new Set(sharedRecipes.map((r) => r.id));
-  const shareableRecipes = recipes.filter((r) => !r.isDraft);
+  const savedRecipes = recipes.filter((r) => savedRecipeIds.includes(r.id) && !r.isDraft);
+  const shareableRecipes = shareSearchQuery.trim()
+    ? savedRecipes.filter((r) => r.title.toLowerCase().includes(shareSearchQuery.trim().toLowerCase()))
+    : savedRecipes;
 
   const handleToggleShare = async (recipe: Recipe) => {
     const isShared = sharedRecipeIds.has(recipe.id);
@@ -269,12 +273,37 @@ export function CircleDetailScreen() {
         ListEmptyComponent={<EmptyState icon="people-outline" message="No members yet." />}
       />
 
-      <Modal visible={isShareModalOpen} transparent animationType="fade" onRequestClose={() => setIsShareModalOpen(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setIsShareModalOpen(false)}>
+      <Modal
+        visible={isShareModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setIsShareModalOpen(false);
+          setShareSearchQuery('');
+        }}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => {
+            setIsShareModalOpen(false);
+            setShareSearchQuery('');
+          }}
+        >
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={[typography.subtitle, styles.modalTitle]}>Share a Recipe</Text>
-            {shareableRecipes.length === 0 ? (
-              <Text style={[typography.body, styles.modalHint]}>No recipes to share yet.</Text>
+            <Text style={[typography.subtitle, styles.modalTitle]}>Share a Saved Recipe</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search your saved recipes..."
+              placeholderTextColor={colors.textMuted}
+              value={shareSearchQuery}
+              onChangeText={setShareSearchQuery}
+            />
+            {savedRecipes.length === 0 ? (
+              <Text style={[typography.body, styles.modalHint]}>
+                No saved recipes yet — save one from the feed first, then share it here.
+              </Text>
+            ) : shareableRecipes.length === 0 ? (
+              <Text style={[typography.body, styles.modalHint]}>No saved recipes matched your search.</Text>
             ) : (
               <ScrollView style={{ maxHeight: 320 }}>
                 {shareableRecipes.map((recipe) => {
@@ -303,7 +332,14 @@ export function CircleDetailScreen() {
               </ScrollView>
             )}
             <View style={{ height: spacing.md }} />
-            <PrimaryButton label="Done" variant="outline" onPress={() => setIsShareModalOpen(false)} />
+            <PrimaryButton
+              label="Done"
+              variant="outline"
+              onPress={() => {
+                setIsShareModalOpen(false);
+                setShareSearchQuery('');
+              }}
+            />
           </Pressable>
         </Pressable>
       </Modal>
@@ -365,6 +401,16 @@ function createStyles(colors: AppColors, typography: AppTypography) {
       padding: spacing.lg,
     },
     modalTitle: { marginBottom: spacing.md },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.sm,
+      minHeight: 44,
+      backgroundColor: colors.background,
+      marginBottom: spacing.sm,
+      ...typography.body,
+    },
     modalHint: { color: colors.textMuted, marginBottom: spacing.sm },
     recipeOptionRow: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   });

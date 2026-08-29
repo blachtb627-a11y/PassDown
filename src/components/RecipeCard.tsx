@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Diet, Recipe } from '../types/recipe';
@@ -6,6 +6,7 @@ import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { getCuisineColor } from '../theme/cuisineColors';
 import { radius, spacing } from '../theme/typography';
+import { ShareToCircleModal } from './ShareToCircleModal';
 
 type Props = {
   recipe: Recipe;
@@ -34,6 +35,7 @@ export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onT
   const hasPhoto = recipe.photos.length > 0;
   const dietBadge = recipe.diet && recipe.diet !== 'None' ? DIET_BADGE[recipe.diet] : null;
   const tags = [recipe.occasion, recipe.difficulty, recipe.mealType].filter(Boolean) as string[];
+  const [isCircleModalOpen, setIsCircleModalOpen] = useState(false);
 
   return (
     <Pressable onPress={onPress} style={styles.card} accessibilityRole="button" accessibilityLabel={recipe.title}>
@@ -130,6 +132,15 @@ export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onT
               <Ionicons name="share-outline" size={20} color={colors.textMuted} />
             </Pressable>
             <Pressable
+              onPress={() => setIsCircleModalOpen(true)}
+              style={styles.actionButton}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Share to a Circle"
+            >
+              <Ionicons name="people-outline" size={20} color={colors.textMuted} />
+            </Pressable>
+            <Pressable
               onPress={onToggleSave}
               style={styles.actionButton}
               hitSlop={6}
@@ -141,6 +152,8 @@ export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onT
           </View>
         </View>
       </View>
+
+      <ShareToCircleModal recipeId={recipe.id} visible={isCircleModalOpen} onClose={() => setIsCircleModalOpen(false)} />
     </Pressable>
   );
 }
