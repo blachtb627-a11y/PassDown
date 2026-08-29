@@ -52,9 +52,11 @@ export async function fetchCircle(circleId: string): Promise<CircleSummary | nul
 }
 
 export async function createCircle(userId: string, name: string): Promise<CircleSummary> {
+  // created_by is deliberately not sent — it defaults to auth.uid() in the
+  // database, so it's always computed the same way the RLS check reads it.
   const { data: circle, error } = await supabase
     .from('circles')
-    .insert({ name, created_by: userId })
+    .insert({ name })
     .select('id, name, created_by')
     .single();
   if (error) throw error;
