@@ -90,72 +90,85 @@ export async function fetchShoppingList(userId: string): Promise<ShoppingListIte
   return data.map(mapShoppingListItem);
 }
 
-export async function addRecipeIngredientsToShoppingList(userId: string, recipe: Recipe): Promise<void> {
-  const existing = await fetchShoppingList(userId);
+type ShoppingListRow = {
+  id?: string;
+  user_id: string;
+  item: string;
+  quantity: string;
+  unit: string;
+  from_recipe_ids: string[];
+};
+
+// Takes the already-loaded shopping list from AppStateContext instead of
+// re-fetching it, and writes every resulting row in a single upsert instead
+// of one insert/update per ingredient — each ingredient used to be its own
+// sequential network round trip, which is what made "Add to Shopping List"
+// feel slow for anything but a one-ingredient recipe. Returns the
+// inserted/updated rows so the caller can patch local state directly rather
+// than re-fetching the whole list again afterward.
+export async function addRecipeIngredientsToShoppingList(
+  userId: string,
+  recipe: Recipe,
+  currentList: ShoppingListItem[]
+): Promise<ShoppingListItem[]> {
   const newIngredients = recipe.ingredients.map((i) => ({ item: i.item, quantity: i.quantity, unit: i.unit }));
 
   let decisions: MergeDecision[] | null = null;
   try {
-    decisions = await requestMergePlan(existing, newIngredients);
+    decisions = await requestMergePlan(currentList, newIngredients);
   } catch (error) {
     console.error('AI shopping list merge failed, falling back to exact-match combining', error);
   }
 
-  if (decisions) {
-    for (let index = 0; index < recipe.ingredients.length; index++) {
-      const ingredient = recipe.ingredients[index];
-      const decision = decisions.find((d) => d.newIngredientIndex === index);
-      const existingItem = decision?.existingItemId ? existing.find((i) => i.id === decision.existingItemId) : undefined;
+  const rows: ShoppingListRow[] = decisions
+    ? recipe.ingredients.map((ingredient, index) => {
+        const decision = decisions!.find((d) => d.newIngredientIndex === index);
+        const existingItem = decision?.existingItemId ? currentList.find((i) => i.id === decision.existingItemId) : undefined;
 
-      if (decision && existingItem) {
-        const { error } = await supabase
-          .from('shopping_list_items')
-          .update({
+        if (decision && existingItem) {
+          return {
+            id: existingItem.id,
+            user_id: userId,
             item: decision.item,
             quantity: decision.quantity,
             unit: decision.unit,
             from_recipe_ids: Array.from(new Set([...existingItem.fromRecipeIds, recipe.id])),
-          })
-          .eq('id', existingItem.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('shopping_list_items').insert({
+          };
+        }
+        return {
           user_id: userId,
           item: decision?.item ?? ingredient.item,
           quantity: decision?.quantity ?? ingredient.quantity,
           unit: decision?.unit ?? ingredient.unit,
           from_recipe_ids: [recipe.id],
-        });
-        if (error) throw error;
-      }
-    }
-    return;
-  }
+        };
+      })
+    : recipe.ingredients.map((ingredient) => {
+        const key = normalizeItemKey(ingredient.item, ingredient.unit);
+        const existingItem = currentList.find((item) => normalizeItemKey(item.item, item.unit) === key);
 
-  for (const ingredient of recipe.ingredients) {
-    const key = normalizeItemKey(ingredient.item, ingredient.unit);
-    const existingItem = existing.find((item) => normalizeItemKey(item.item, item.unit) === key);
-
-    if (existingItem) {
-      const { error } = await supabase
-        .from('shopping_list_items')
-        .update({
-          quantity: sumQuantities(existingItem.quantity, ingredient.quantity),
-          from_recipe_ids: Array.from(new Set([...existingItem.fromRecipeIds, recipe.id])),
-        })
-        .eq('id', existingItem.id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.from('shopping_list_items').insert({
-        user_id: userId,
-        item: ingredient.item,
-        quantity: ingredient.quantity,
-        unit: ingredient.unit,
-        from_recipe_ids: [recipe.id],
+        if (existingItem) {
+          return {
+            id: existingItem.id,
+            user_id: userId,
+            item: existingItem.item,
+            quantity: sumQuantities(existingItem.quantity, ingredient.quantity),
+            unit: existingItem.unit,
+            from_recipe_ids: Array.from(new Set([...existingItem.fromRecipeIds, recipe.id])),
+          };
+        }
+        return {
+          user_id: userId,
+          item: ingredient.item,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+          from_recipe_ids: [recipe.id],
+        };
       });
-      if (error) throw error;
-    }
-  }
+
+  const { data, error } = await supabase.from('shopping_list_items').upsert(rows, { onConflict: 'id' }).select();
+  if (error) throw error;
+  return data.map(mapShoppingListItem);
 }
 
 export async function toggleShoppingListItem(itemId: string, checked: boolean): Promise<void> {

@@ -279,8 +279,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     };
 
     const addRecipeIngredientsToShoppingList = async (recipe: Recipe) => {
-      await apiAddRecipeIngredientsToShoppingList(currentUser.id, recipe);
-      setShoppingList(await fetchShoppingList(currentUser.id));
+      const updatedItems = await apiAddRecipeIngredientsToShoppingList(currentUser.id, recipe, shoppingList);
+      setShoppingList((prev) => {
+        const byId = new Map(prev.map((item) => [item.id, item]));
+        for (const item of updatedItems) byId.set(item.id, item);
+        return Array.from(byId.values());
+      });
     };
 
     const toggleShoppingListItem = (itemId: string) => {
