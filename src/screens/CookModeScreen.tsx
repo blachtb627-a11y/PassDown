@@ -97,6 +97,7 @@ export function CookModeScreen() {
           const index = Math.round(e.nativeEvent.contentOffset.x / width);
           setCurrentIndex(index);
         }}
+        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
         renderItem={({ item, index }) => (
           <View style={styles.stepPage}>
             <Text style={styles.stepLabel}>
