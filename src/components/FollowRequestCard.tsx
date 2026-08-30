@@ -6,22 +6,14 @@ import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme/typography';
 
-export type FollowStatus = 'none' | 'pending' | 'accepted';
-
 type Props = {
   user: Author;
-  followStatus: FollowStatus;
-  onToggleFollow: () => void;
+  onAccept: () => void;
+  onDecline: () => void;
   onPress: () => void;
 };
 
-const FOLLOW_BUTTON_LABEL: Record<FollowStatus, string> = {
-  none: 'Follow',
-  pending: 'Requested',
-  accepted: 'Following',
-};
-
-export function UserResultCard({ user, followStatus, onToggleFollow, onPress }: Props) {
+export function FollowRequestCard({ user, onAccept, onDecline, onPress }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -37,19 +29,11 @@ export function UserResultCard({ user, followStatus, onToggleFollow, onPress }: 
             @{user.username}
           </Text>
         ) : null}
-        {user.bio ? (
-          <Text style={typography.meta} numberOfLines={1}>
-            {user.bio}
-          </Text>
-        ) : null}
       </View>
-      <View style={styles.followButton}>
-        <PrimaryButton
-          label={FOLLOW_BUTTON_LABEL[followStatus]}
-          variant={followStatus === 'none' ? 'primary' : 'outline'}
-          fullWidth={false}
-          onPress={onToggleFollow}
-        />
+      <View style={styles.actions}>
+        <PrimaryButton label="Accept" fullWidth={false} onPress={onAccept} />
+        <View style={{ width: spacing.xs }} />
+        <PrimaryButton label="Decline" variant="outline" fullWidth={false} onPress={onDecline} />
       </View>
     </Pressable>
   );
@@ -70,6 +54,6 @@ function createStyles(colors: AppColors) {
     },
     avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border },
     info: { flex: 1 },
-    followButton: { minWidth: 96 },
+    actions: { flexDirection: 'row' },
   });
 }

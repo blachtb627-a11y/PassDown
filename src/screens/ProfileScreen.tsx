@@ -45,6 +45,7 @@ export function ProfileScreen() {
     addRecipeToCollection,
     removeRecipeFromCollection,
     followedAuthorIds,
+    pendingOutgoingFollowIds,
     toggleFollowAuthor,
     currentUser,
   } = useAppState();
@@ -158,6 +159,7 @@ export function ProfileScreen() {
   }
 
   const isFollowing = followedAuthorIds.includes(profileAuthor.id);
+  const isFollowPending = pendingOutgoingFollowIds.includes(profileAuthor.id);
   const isSavedTab = isOwnProfile && activeTab === 'saved';
   const visibleRecipes = isSavedTab ? visibleSavedRecipes : authoredRecipes;
 
@@ -241,8 +243,8 @@ export function ProfileScreen() {
 
             {!isOwnProfile ? (
               <PrimaryButton
-                label={isFollowing ? 'Following' : 'Follow'}
-                variant={isFollowing ? 'outline' : 'primary'}
+                label={isFollowing ? 'Following' : isFollowPending ? 'Requested' : 'Follow'}
+                variant={isFollowing || isFollowPending ? 'outline' : 'primary'}
                 onPress={() => toggleFollowAuthor(profileAuthor.id)}
               />
             ) : (

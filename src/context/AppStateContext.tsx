@@ -14,9 +14,13 @@ import {
   upsertRecipe,
 } from '../lib/api/recipes';
 import {
+  acceptFollowRequest as apiAcceptFollowRequest,
   fetchFollowedAuthorIds,
+  fetchIncomingFollowRequests,
+  fetchPendingOutgoingFollowIds,
   fetchProfileWithCounts,
-  toggleFollow as apiToggleFollow,
+  removeFollow as apiRemoveFollow,
+  sendFollowRequest as apiSendFollowRequest,
   updateProfile as apiUpdateProfile,
   ProfileUpdateInput,
 } from '../lib/api/social';
@@ -83,6 +87,8 @@ type AppStateContextValue = {
   collections: Collection[];
   shoppingList: ShoppingListItem[];
   followedAuthorIds: string[];
+  pendingOutgoingFollowIds: string[];
+  incomingFollowRequests: Author[];
   isLoaded: boolean;
   currentUser: Author;
   saveRecipe: (input: RecipeFormInput) => Promise<Recipe>;
@@ -90,6 +96,8 @@ type AppStateContextValue = {
   toggleSaveRecipe: (recipeId: string) => void;
   toggleLikeRecipe: (recipeId: string) => void;
   toggleFollowAuthor: (authorId: string) => void;
+  acceptFollowRequest: (followerId: string) => void;
+  declineFollowRequest: (followerId: string) => void;
   createCollection: (name: string) => Promise<void>;
   renameCollection: (collectionId: string, name: string) => Promise<void>;
   deleteCollection: (collectionId: string) => Promise<void>;
@@ -117,6 +125,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
   const [followedAuthorIds, setFollowedAuthorIds] = useState<string[]>([]);
+  const [pendingOutgoingFollowIds, setPendingOutgoingFollowIds] = useState<string[]>([]);
+  const [incomingFollowRequests, setIncomingFollowRequests] = useState<Author[]>([]);
   const [ownProfile, setOwnProfile] = useState<Author | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -142,12 +152,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setCollections([]);
       setShoppingList([]);
       setFollowedAuthorIds([]);
+      setPendingOutgoingFollowIds([]);
+      setIncomingFollowRequests([]);
       setOwnProfile(null);
       setIsLoaded(true);
       return;
     }
     try {
-      const [feed, myRecipes, saved, liked, cols, list, followed, profile] = await Promise.all([
+      const [feed, myRecipes, saved, liked, cols, list, followed, pendingOutgoing, incomingRequests, profile] = await Promise.all([
         fetchFeedRecipes(),
         fetchRecipesByAuthor(userId),
         fetchSavedRecipeIds(userId),
@@ -155,6 +167,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         fetchCollections(userId),
         fetchShoppingList(userId),
         fetchFollowedAuthorIds(userId),
+        fetchPendingOutgoingFollowIds(userId),
+        fetchIncomingFollowRequests(userId),
         fetchProfileWithCounts(userId),
       ]);
       setRecipes(dedupeRecipesById([...feed, ...myRecipes]));
@@ -163,6 +177,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setCollections(cols);
       setShoppingList(list);
       setFollowedAuthorIds(followed);
+      setPendingOutgoingFollowIds(pendingOutgoing);
+      setIncomingFollowRequests(incomingRequests);
       if (profile) setOwnProfile(profile);
     } catch (error) {
       console.error('Failed to load PassDown data', error);
@@ -224,14 +240,45 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
+    // Three-state toggle: not connected -> send a request; already requested
+    // -> cancel it; already following -> unfollow. Both "cancel" and
+    // "unfollow" are the same underlying delete, just from different states.
     const toggleFollowAuthor = (authorId: string) => {
       const wasFollowing = followedAuthorIds.includes(authorId);
-      setFollowedAuthorIds((prev) => (wasFollowing ? prev.filter((id) => id !== authorId) : [...prev, authorId]));
-      apiToggleFollow(currentUser.id, authorId, wasFollowing).catch((error) => {
-        console.error('Failed to follow/unfollow', error);
-        setFollowedAuthorIds((prev) =>
-          wasFollowing ? [...prev, authorId] : prev.filter((id) => id !== authorId)
-        );
+      const wasPending = pendingOutgoingFollowIds.includes(authorId);
+
+      if (wasFollowing || wasPending) {
+        if (wasFollowing) setFollowedAuthorIds((prev) => prev.filter((id) => id !== authorId));
+        if (wasPending) setPendingOutgoingFollowIds((prev) => prev.filter((id) => id !== authorId));
+        apiRemoveFollow(currentUser.id, authorId).catch((error) => {
+          console.error('Failed to unfollow/cancel follow request', error);
+          if (wasFollowing) setFollowedAuthorIds((prev) => [...prev, authorId]);
+          if (wasPending) setPendingOutgoingFollowIds((prev) => [...prev, authorId]);
+        });
+      } else {
+        setPendingOutgoingFollowIds((prev) => [...prev, authorId]);
+        apiSendFollowRequest(currentUser.id, authorId).catch((error) => {
+          console.error('Failed to send follow request', error);
+          setPendingOutgoingFollowIds((prev) => prev.filter((id) => id !== authorId));
+        });
+      }
+    };
+
+    const acceptFollowRequest = (followerId: string) => {
+      const request = incomingFollowRequests.find((a) => a.id === followerId);
+      setIncomingFollowRequests((prev) => prev.filter((a) => a.id !== followerId));
+      apiAcceptFollowRequest(followerId, currentUser.id).catch((error) => {
+        console.error('Failed to accept follow request', error);
+        if (request) setIncomingFollowRequests((prev) => [...prev, request]);
+      });
+    };
+
+    const declineFollowRequest = (followerId: string) => {
+      const request = incomingFollowRequests.find((a) => a.id === followerId);
+      setIncomingFollowRequests((prev) => prev.filter((a) => a.id !== followerId));
+      apiRemoveFollow(followerId, currentUser.id).catch((error) => {
+        console.error('Failed to decline follow request', error);
+        if (request) setIncomingFollowRequests((prev) => [...prev, request]);
       });
     };
 
@@ -375,6 +422,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       collections,
       shoppingList,
       followedAuthorIds,
+      pendingOutgoingFollowIds,
+      incomingFollowRequests,
       isLoaded,
       currentUser,
       saveRecipe,
@@ -382,6 +431,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleSaveRecipe,
       toggleLikeRecipe,
       toggleFollowAuthor,
+      acceptFollowRequest,
+      declineFollowRequest,
       createCollection,
       renameCollection,
       deleteCollection,
@@ -403,6 +454,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     collections,
     shoppingList,
     followedAuthorIds,
+    pendingOutgoingFollowIds,
+    incomingFollowRequests,
     isLoaded,
     currentUser,
     refetch,

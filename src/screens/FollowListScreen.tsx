@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../context/AppStateContext';
 import { fetchFollowers, fetchFollowing } from '../lib/api/social';
-import { UserResultCard } from '../components/UserResultCard';
+import { FollowStatus, UserResultCard } from '../components/UserResultCard';
 import { EmptyState } from '../components/EmptyState';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -16,7 +16,7 @@ export function FollowListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'FollowList'>>();
   const { userId, mode } = route.params;
-  const { followedAuthorIds, toggleFollowAuthor } = useAppState();
+  const { followedAuthorIds, pendingOutgoingFollowIds, toggleFollowAuthor } = useAppState();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -56,14 +56,21 @@ export function FollowListScreen() {
             />
           )
         }
-        renderItem={({ item }) => (
-          <UserResultCard
-            user={item}
-            isFollowing={followedAuthorIds.includes(item.id)}
-            onToggleFollow={() => toggleFollowAuthor(item.id)}
-            onPress={() => navigation.navigate('UserProfile', { userId: item.id })}
-          />
-        )}
+        renderItem={({ item }) => {
+          const followStatus: FollowStatus = followedAuthorIds.includes(item.id)
+            ? 'accepted'
+            : pendingOutgoingFollowIds.includes(item.id)
+            ? 'pending'
+            : 'none';
+          return (
+            <UserResultCard
+              user={item}
+              followStatus={followStatus}
+              onToggleFollow={() => toggleFollowAuthor(item.id)}
+              onPress={() => navigation.navigate('UserProfile', { userId: item.id })}
+            />
+          );
+        }}
       />
     </SafeAreaView>
   );
