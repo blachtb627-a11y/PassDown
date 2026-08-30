@@ -16,6 +16,7 @@ import {
 import { fetchCircleRecipes, removeRecipeFromCircle, shareRecipeToCircle } from '../lib/api/circleRecipes';
 import { searchUsers } from '../lib/api/social';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { SavedRecipeTile } from '../components/SavedRecipeTile';
 import { EmptyState } from '../components/EmptyState';
 import { confirm, getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
@@ -183,20 +184,12 @@ export function CircleDetailScreen() {
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipesRow}>
                 {sharedRecipes.map((recipe) => (
-                  <Pressable
+                  <SavedRecipeTile
                     key={recipe.id}
+                    recipe={recipe}
                     style={styles.recipeTile}
                     onPress={() => navigation.navigate('RecipeDetail', { recipeId: recipe.id })}
-                    accessibilityRole="button"
-                    accessibilityLabel={recipe.title}
-                  >
-                    <Image source={{ uri: recipe.photos[0] }} style={styles.recipeTilePhoto} />
-                    <View style={styles.recipeTileCaption}>
-                      <Text style={[typography.meta, styles.recipeTileTitle]} numberOfLines={2}>
-                        {recipe.title}
-                      </Text>
-                    </View>
-                  </Pressable>
+                  />
                 ))}
               </ScrollView>
             )}
@@ -386,16 +379,7 @@ function createStyles(colors: AppColors, typography: AppTypography) {
       marginBottom: spacing.sm,
     },
     recipesRow: { flexGrow: 0, marginBottom: spacing.sm },
-    recipeTile: {
-      width: 110,
-      marginRight: spacing.sm,
-      borderRadius: radius.md,
-      backgroundColor: colors.secondary,
-      overflow: 'hidden',
-    },
-    recipeTilePhoto: { width: 110, height: 110, backgroundColor: colors.border },
-    recipeTileCaption: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, minHeight: 40 },
-    recipeTileTitle: { color: colors.white },
+    recipeTile: { width: 90, marginRight: spacing.sm },
     modalOverlay: {
       flex: 1,
       backgroundColor: colors.overlay,

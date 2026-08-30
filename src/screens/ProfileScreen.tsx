@@ -22,6 +22,7 @@ import { fetchRecipesByAuthor } from '../lib/api/recipes';
 import { Author, Collection, Recipe } from '../types/recipe';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { FilterChip } from '../components/FilterChip';
+import { SavedRecipeTile } from '../components/SavedRecipeTile';
 import { EmptyState } from '../components/EmptyState';
 import { confirm, getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
@@ -330,16 +331,13 @@ export function ProfileScreen() {
             }
           />
         }
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.gridItem}
-            onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
-            accessibilityRole="button"
-            accessibilityLabel={item.title}
-          >
-            <View style={styles.gridPhotoWrapper}>
-              <Image source={{ uri: item.photos[0] }} style={styles.gridPhoto} />
-              {isSavedTab ? (
+        renderItem={({ item }) =>
+          isSavedTab ? (
+            <SavedRecipeTile
+              recipe={item}
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
+              overlay={
                 <Pressable
                   onPress={() => setAssignRecipeId(item.id)}
                   hitSlop={6}
@@ -349,13 +347,22 @@ export function ProfileScreen() {
                 >
                   <Ionicons name="folder-outline" size={16} color={colors.white} />
                 </Pressable>
-              ) : null}
-            </View>
-            <Text style={typography.bodyBold} numberOfLines={2}>
-              {item.title}
-            </Text>
-          </Pressable>
-        )}
+              }
+            />
+          ) : (
+            <Pressable
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
+              accessibilityRole="button"
+              accessibilityLabel={item.title}
+            >
+              <Image source={{ uri: item.photos[0] }} style={styles.gridPhoto} />
+              <Text style={typography.bodyBold} numberOfLines={2}>
+                {item.title}
+              </Text>
+            </Pressable>
+          )
+        }
       />
 
       <Modal visible={!!nameModal} transparent animationType="fade" onRequestClose={() => setNameModal(null)}>
@@ -484,7 +491,6 @@ function createStyles(colors: AppColors, typography: AppTypography) {
       marginRight: spacing.sm,
     },
     gridItem: { flex: 1, gap: spacing.xs },
-    gridPhotoWrapper: { position: 'relative' },
     gridPhoto: { width: '100%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: colors.border },
     collectionButton: {
       position: 'absolute',

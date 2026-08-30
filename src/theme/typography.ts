@@ -3,7 +3,7 @@ import { AppColors } from './colors';
 
 // A warm, storytelling serif for the wordmark and photo-overlaid recipe titles — everything
 // else stays on the system sans so body text/forms keep their native, highly-legible feel.
-const serifFamily = Platform.select({
+export const serifFamily = Platform.select({
   ios: 'Georgia',
   android: 'serif',
   web: "Georgia, 'Times New Roman', serif",
