@@ -32,7 +32,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 - **Cook Mode** — full-screen, large-text, one step at a time, keeps screen awake, per-step timer when a step has a duration.
 - **Post a recipe** — the 6-step flow from the brief (Photo → Title/Story → Ingredients → Steps → Details → Review), with a visible "Step X of 6" progress bar, Save-as-Draft support, and a Public/Private choice on the Details step (private = only your followers can see it). The Photo step's **"Scan a Recipe Card"** button reads a photo of a handwritten or printed recipe with AI (see below) and fills in title/ingredients/steps for you, jumping straight to Review. The Details step's Cuisine field is the same country picker used to filter Home, so what a recipe can be posted as always matches what it can be filtered by.
 - **Profile** — own and other users' profiles, a Your Recipes / Saved tab switcher (own profile only — Saved carries collection filter chips, a "New Collection" button, and per-recipe collection assignment), follow button, and tappable follower/following counts that open a list of who they are (with a follow button on each).
-- **Circles** — private named groups (open from the Circles tab) for bringing specific family/friends together — e.g. "Mom's Side" or "Sunday Dinner." The creator names the circle, adds people by searching name/username, and can remove anyone or delete the circle; anyone else can leave. Any member can also share a recipe into the circle (from the recipe's own "Circle" action, or the circle's own "Share a Saved Recipe" picker) — this makes the recipe visible to every member regardless of its own public/private setting, since sharing into a trusted circle is a deliberate visibility grant. There's still no invite/accept step (adding someone is immediate) or group chat — natural next steps once this is in use.
+- **Circles** — private named groups (open from the Circles tab) for bringing specific family/friends together — e.g. "Mom's Side" or "Sunday Dinner." A **Members** button in the top-right of a circle's screen opens its roster, where the creator adds people by searching name/username, can remove anyone or delete the circle, and anyone else can leave. The circle's main screen is its Shared Recipes row (any member can share one of their saved recipes in, from there or from the recipe's own "Circle" action — this makes the recipe visible to every member regardless of its own public/private setting, since sharing into a trusted circle is a deliberate visibility grant) plus a **group chat** every member can post to and read, live-updating via Supabase Realtime — see Circle group chat below. There's still no invite/accept step — adding someone is immediate.
 - **Settings** — notification toggles, account, about.
 
 Ease-of-use and accessibility principles from sections 6 & 11 are applied throughout: every icon has a text label, minimum 16pt body text (system font-scaling left on, never disabled), 44×44pt minimum tap targets, high-contrast warm palette, and gentle empty-state copy.
@@ -132,6 +132,7 @@ Applied to the Supabase project via migrations. The initial schema was applied d
 - `comments`, `made_this_posts`, `likes`, `saves`, `follows`, `collections`, `collection_recipes`, `shopping_list_items`.
 - `circles` / `circle_members` — a circle is only visible to its own members (RLS, not client filtering); only the creator (`circles.created_by`) can add members or delete the circle, but any member can remove themselves (`supabase/migrations/..._add_circles.sql`).
 - `circle_recipes` — join table sharing a recipe into a circle; any member can add one, the adder or the circle's owner can remove it. A recipe shared into a circle gets an *additional* permissive SELECT policy on `recipes` granting visibility to that circle's members, layered on top of (not replacing) the recipe's own public/private/followers rule.
+- `circle_messages` — a circle's group chat; any member can post, any member can read the full history (`supabase/migrations/..._add_circle_messages.sql`, see Circle group chat below).
 
 Every table has row-level security: published recipes and social data (comments, likes, follows) are readable by everyone, but people can only write their own rows; saves, collections, and the shopping list are private per-account.
 
@@ -189,6 +190,14 @@ Uses the same Anthropic API key as the two Edge Functions above, so — same as 
 ```bash
 npx supabase functions deploy translate-recipe --project-ref <your-project-ref>
 ```
+
+## Circle group chat
+
+Opening a circle now shows its Shared Recipes row plus a group chat every member can post to and read — a normal name-and-message feed with a text box pinned to the bottom, no bubbles or read receipts. A **Members** button in the top-right of the header (`src/screens/CircleMembersScreen.tsx`) is where the roster, adding people, removing people, and leaving/deleting the circle all live now — that used to be the main content of a circle's screen, moved out to make room for the chat.
+
+New messages appear for every other member without them needing to refresh, via Supabase Realtime (`src/lib/api/circleMessages.ts`'s `subscribeToCircleMessages`, a `postgres_changes` subscription filtered to that circle). Realtime still enforces the table's own row-level security per subscriber, so a member of one circle never receives another circle's messages even though the whole table is broadcast-enabled.
+
+`supabase/migrations/20260830230000_add_circle_messages.sql` creates the `circle_messages` table, its RLS (any member can read, any member can post as themselves — reusing the `is_circle_member()` helper already defined for circles' own RLS), and adds the table to the `supabase_realtime` publication so the live-update part above works with no separate dashboard toggle. Apply it the same way as any other migration: Supabase Dashboard → **SQL Editor** → **New query** → paste the file's contents → **Run**.
 
 ## Next steps
 
