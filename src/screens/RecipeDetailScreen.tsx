@@ -4,6 +4,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -22,6 +23,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ShareToCircleModal } from '../components/ShareToCircleModal';
 import { confirm, getErrorMessage, notify } from '../lib/alert';
 import { translateRecipe, TranslatedRecipe } from '../lib/api/translateRecipe';
+import { getRecipeShareUrl } from '../lib/shareLink';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
@@ -229,7 +231,14 @@ export function RecipeDetailScreen() {
           </Pressable>
           <Pressable
             style={styles.actionBarButton}
-            onPress={() => Share.share({ message: `Check out "${recipe.title}" on PassDown!` })}
+            onPress={() => {
+              const url = getRecipeShareUrl(recipe.id);
+              Share.share(
+                Platform.OS === 'ios'
+                  ? { message: `Check out "${recipe.title}" on PassDown!`, url }
+                  : { message: `Check out "${recipe.title}" on PassDown!\n${url}` }
+              );
+            }}
             accessibilityRole="button"
             accessibilityLabel="Share"
           >

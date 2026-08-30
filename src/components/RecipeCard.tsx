@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Diet, Recipe } from '../types/recipe';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { getCuisineColor } from '../theme/cuisineColors';
 import { radius, spacing } from '../theme/typography';
+import { getRecipeShareUrl } from '../lib/shareLink';
 import { ShareToCircleModal } from './ShareToCircleModal';
 
 type Props = {
@@ -123,7 +124,14 @@ export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onT
           </View>
           <View style={styles.actionsGroup}>
             <Pressable
-              onPress={() => Share.share({ message: `Check out "${recipe.title}" on PassDown!` })}
+              onPress={() => {
+                const url = getRecipeShareUrl(recipe.id);
+                Share.share(
+                  Platform.OS === 'ios'
+                    ? { message: `Check out "${recipe.title}" on PassDown!`, url }
+                    : { message: `Check out "${recipe.title}" on PassDown!\n${url}` }
+                );
+              }}
               style={styles.actionButton}
               hitSlop={6}
               accessibilityRole="button"

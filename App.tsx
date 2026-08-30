@@ -7,6 +7,8 @@ import { isSupabaseConfigured } from './src/lib/supabase';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { AppStateProvider } from './src/context/AppStateContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { navigationRef } from './src/navigation/navigationRef';
+import { DeepLinkHandler } from './src/navigation/DeepLinkHandler';
 import { SupabaseSetupNoticeScreen } from './src/screens/Auth/SupabaseSetupNoticeScreen';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
@@ -40,7 +42,8 @@ function AppShell() {
 
   return (
     <AppStateProvider>
-      <NavigationContainer theme={navTheme}>
+      <DeepLinkHandler />
+      <NavigationContainer ref={navigationRef} theme={navTheme}>
         <RootNavigator />
         <StatusBar style={isDark ? 'light' : 'dark'} />
       </NavigationContainer>

@@ -109,6 +109,20 @@ https://passdown.it.com
 2. In this repo's **Settings → Pages**, set **Custom domain** to `passdown.it.com` and save — GitHub verifies DNS and provisions HTTPS automatically (can take a few minutes up to a couple hours). Once verified, check **Enforce HTTPS**.
 3. The deploy workflow writes a `CNAME` file into the build output on every run so this setting survives future Actions-based deploys.
 
+## Sharing a recipe
+
+The Share button (on a recipe card or Recipe Detail) shares a real link — `https://passdown.it.com/recipe/<id>` — instead of just text, so whoever gets it (iMessage, texts, anywhere) lands straight on that recipe. Opening the link:
+
+- If they're already signed in, it goes directly to the recipe.
+- If not, it takes them to sign up/log in first (same as any other page — there's no public/anonymous browsing), then drops them onto that exact recipe right after, instead of the normal home feed.
+- If the recipe is private and they don't have access to it (not the author, not shared to a circle they're in), it shows the normal "couldn't be found" message rather than the recipe — the same row-level security that already protects private recipes everywhere else.
+
+Two pieces make this work:
+- `src/navigation/DeepLinkHandler.tsx` reads the `/recipe/<id>` out of the URL the app was opened with, and once both a session and the recipe data are loaded, navigates there via a navigation ref (`src/navigation/navigationRef.ts`) set up in `App.tsx`.
+- GitHub Pages has no server-side router, so a hard page load of `/recipe/<id>` (exactly what happens when a link is tapped) would 404 before the app ever boots. `scripts/fix-web-base-path.js` writes a `dist/404.html` that repackages the requested path into a query string and redirects to `/`, and injects a small inline script into `dist/index.html` that unpacks it back into the address bar (via `history.replaceState`) before the app boots — a standard workaround for static hosts with no routing of their own.
+
+This is web-only for now, matching the only build that's actually distributed today (see Web preview above) — there's no custom URL scheme set up for a native build to catch these links itself yet.
+
 ## Data model
 
 Applied to the Supabase project via migrations. The initial schema was applied directly and isn't checked in as SQL yet (see Next Steps); `supabase/migrations/` holds changes made since, starting with the username addition below.
