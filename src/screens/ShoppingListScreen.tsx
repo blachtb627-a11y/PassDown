@@ -4,15 +4,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppState } from '../context/AppStateContext';
 import { EmptyState } from '../components/EmptyState';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { confirm } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme/typography';
 
 export function ShoppingListScreen() {
-  const { shoppingList, toggleShoppingListItem, clearCheckedShoppingListItems } = useAppState();
+  const { shoppingList, toggleShoppingListItem, clearCheckedShoppingListItems, clearAllShoppingListItems } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const checkedCount = shoppingList.filter((i) => i.checked).length;
+
+  const handleClearAll = async () => {
+    const confirmed = await confirm({
+      title: 'Clear entire shopping list?',
+      message: 'This removes every item, checked or not. This can\'t be undone.',
+      confirmLabel: 'Clear All',
+    });
+    if (confirmed) clearAllShoppingListItems();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -45,11 +55,14 @@ export function ShoppingListScreen() {
             </Pressable>
           )}
           ListFooterComponent={
-            checkedCount > 0 ? (
-              <View style={styles.footer}>
-                <PrimaryButton label={`Clear ${checkedCount} Checked Items`} variant="outline" onPress={clearCheckedShoppingListItems} />
-              </View>
-            ) : null
+            <View style={styles.footer}>
+              {checkedCount > 0 ? (
+                <View style={styles.footerButton}>
+                  <PrimaryButton label={`Clear ${checkedCount} Checked Items`} variant="outline" onPress={clearCheckedShoppingListItems} />
+                </View>
+              ) : null}
+              <PrimaryButton label="Clear All" variant="outline" onPress={handleClearAll} />
+            </View>
           }
         />
       )}
@@ -73,5 +86,6 @@ function createStyles(colors: AppColors) {
     itemText: { flex: 1 },
     itemChecked: { textDecorationLine: 'line-through', color: colors.textMuted },
     footer: { paddingTop: spacing.lg },
+    footerButton: { marginBottom: spacing.sm },
   });
 }

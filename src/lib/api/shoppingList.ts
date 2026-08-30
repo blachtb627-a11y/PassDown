@@ -167,3 +167,8 @@ export async function clearCheckedShoppingListItems(userId: string): Promise<voi
   const { error } = await supabase.from('shopping_list_items').delete().eq('user_id', userId).eq('checked', true);
   if (error) throw error;
 }
+
+export async function clearAllShoppingListItems(userId: string): Promise<void> {
+  const { error } = await supabase.from('shopping_list_items').delete().eq('user_id', userId);
+  if (error) throw error;
+}

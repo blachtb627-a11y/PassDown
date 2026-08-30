@@ -30,6 +30,7 @@ import {
 } from '../lib/api/collections';
 import {
   addRecipeIngredientsToShoppingList as apiAddRecipeIngredientsToShoppingList,
+  clearAllShoppingListItems as apiClearAllShoppingListItems,
   clearCheckedShoppingListItems as apiClearCheckedShoppingListItems,
   fetchShoppingList,
   toggleShoppingListItem as apiToggleShoppingListItem,
@@ -97,6 +98,7 @@ type AppStateContextValue = {
   addRecipeIngredientsToShoppingList: (recipe: Recipe) => Promise<void>;
   toggleShoppingListItem: (itemId: string) => void;
   clearCheckedShoppingListItems: () => void;
+  clearAllShoppingListItems: () => void;
   addMadeThisPost: (recipeId: string, localPhotoUri: string, note?: string) => Promise<void>;
   addComment: (recipeId: string, text: string) => void;
   updateProfile: (input: ProfileUpdateInput & { localAvatarUri?: string }) => Promise<void>;
@@ -298,6 +300,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
+    const clearAllShoppingListItems = () => {
+      const previous = shoppingList;
+      setShoppingList([]);
+      apiClearAllShoppingListItems(currentUser.id).catch((error) => {
+        console.error('Failed to clear shopping list', error);
+        setShoppingList(previous);
+      });
+    };
+
     const addMadeThisPost = async (recipeId: string, localPhotoUri: string, note?: string) => {
       const photoUrl = await uploadPhoto(localPhotoUri, currentUser.id);
       await apiAddMadeThisPost(recipeId, currentUser.id, photoUrl, note);
@@ -375,6 +386,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       addRecipeIngredientsToShoppingList,
       toggleShoppingListItem,
       clearCheckedShoppingListItems,
+      clearAllShoppingListItems,
       addMadeThisPost,
       addComment,
       updateProfile,

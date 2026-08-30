@@ -39,6 +39,7 @@ export function RecipeDetailScreen() {
   const [checkedIngredients, setCheckedIngredients] = useState<Record<string, boolean>>({});
   const [commentText, setCommentText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddingToShoppingList, setIsAddingToShoppingList] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const hasScrolledToComments = useRef(false);
@@ -164,12 +165,17 @@ export function RecipeDetailScreen() {
           label="Add to Shopping List"
           icon="cart-outline"
           variant="outline"
+          loading={isAddingToShoppingList}
           onPress={async () => {
+            if (isAddingToShoppingList) return;
+            setIsAddingToShoppingList(true);
             try {
               await addRecipeIngredientsToShoppingList(recipe);
               notify('Added!', 'Ingredients added to your Shopping List.');
             } catch (error) {
               notify('Something went wrong', 'Could not add ingredients to your Shopping List.');
+            } finally {
+              setIsAddingToShoppingList(false);
             }
           }}
         />
