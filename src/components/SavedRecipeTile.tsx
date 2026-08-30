@@ -53,7 +53,6 @@ function createStyles(colors: AppColors) {
     },
     captionText: {
       fontFamily: serifFamily,
-      fontStyle: 'italic',
       fontWeight: '700',
       fontSize: 14,
       color: colors.white,

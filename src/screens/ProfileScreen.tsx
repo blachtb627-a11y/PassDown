@@ -331,13 +331,13 @@ export function ProfileScreen() {
             }
           />
         }
-        renderItem={({ item }) =>
-          isSavedTab ? (
-            <SavedRecipeTile
-              recipe={item}
-              style={styles.gridItem}
-              onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
-              overlay={
+        renderItem={({ item }) => (
+          <SavedRecipeTile
+            recipe={item}
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
+            overlay={
+              isSavedTab ? (
                 <Pressable
                   onPress={() => setAssignRecipeId(item.id)}
                   hitSlop={6}
@@ -347,22 +347,10 @@ export function ProfileScreen() {
                 >
                   <Ionicons name="folder-outline" size={16} color={colors.white} />
                 </Pressable>
-              }
-            />
-          ) : (
-            <Pressable
-              style={styles.gridItem}
-              onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
-              accessibilityRole="button"
-              accessibilityLabel={item.title}
-            >
-              <Image source={{ uri: item.photos[0] }} style={styles.gridPhoto} />
-              <Text style={typography.bodyBold} numberOfLines={2}>
-                {item.title}
-              </Text>
-            </Pressable>
-          )
-        }
+              ) : undefined
+            }
+          />
+        )}
       />
 
       <Modal visible={!!nameModal} transparent animationType="fade" onRequestClose={() => setNameModal(null)}>
@@ -491,7 +479,6 @@ function createStyles(colors: AppColors, typography: AppTypography) {
       marginRight: spacing.sm,
     },
     gridItem: { flex: 1, gap: spacing.xs },
-    gridPhoto: { width: '100%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: colors.border },
     collectionButton: {
       position: 'absolute',
       top: spacing.xs,
