@@ -66,7 +66,8 @@ export function PostRecipeScreen() {
       prepMinutes: recipe.prepMinutes ? String(recipe.prepMinutes) : prev.prepMinutes,
       cookMinutes: recipe.cookMinutes ? String(recipe.cookMinutes) : prev.cookMinutes,
     }));
-    setStepIndex(STEP_TITLES.length - 1);
+    // Stay on the Photo step — a real photo of the finished dish is still
+    // required before moving on, same as any other post.
   };
 
   const canGoNext = () => {

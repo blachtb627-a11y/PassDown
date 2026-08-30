@@ -14,7 +14,7 @@ const MAX_PHOTOS = 10;
 type Props = {
   photos: string[];
   onChange: (photos: string[]) => void;
-  onScanned: (recipe: ScannedRecipe, photoUri: string) => void;
+  onScanned: (recipe: ScannedRecipe) => void;
 };
 
 export function PhotoStep({ photos, onChange, onScanned }: Props) {
@@ -60,9 +60,11 @@ export function PhotoStep({ photos, onChange, onScanned }: Props) {
     setIsScanning(true);
     try {
       const recipe = await scanRecipePhoto(photoUri);
-      onChange([...photos, photoUri].slice(0, MAX_PHOTOS));
-      onScanned(recipe, photoUri);
-      notify('Recipe scanned!', 'Take a look and fix up anything it misread.');
+      // The card photo itself is only used to read the recipe — it's never
+      // added to the recipe's own photos. The user still needs a real photo
+      // of the finished dish, added below with the normal buttons.
+      onScanned(recipe);
+      notify('Recipe scanned!', 'Now add a photo of the finished dish below, then look over the rest before posting.');
     } catch (error) {
       notify('Could not read that recipe', error instanceof Error ? error.message : 'Please try again.');
     } finally {
