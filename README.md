@@ -18,18 +18,19 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 | Data access | React Context (`useAppState()`) over a small `src/lib/api/` layer | Every screen reads/writes through one hook; the Supabase queries live in one place so the query layer can change without touching screens. |
 | Images | `expo-image-picker` + Supabase Storage | Camera + photo library picking, uploaded to a public `recipe-photos` bucket so photos are visible to every user, not just the device that took them. On web, photos are downscaled (capped at 1600px on the long edge, JPEG quality 0.82) client-side via canvas before upload — a phone photo can be 10+ MB at full resolution, which made the feed feel slow since every card was fetching a full-size photo just to show a small thumbnail. |
 | Cook Mode | `expo-keep-awake` | Keeps the screen from sleeping while cooking, per section 4.8. |
+| AI recipe scan | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Reads a photo of a handwritten/printed recipe and returns structured title/ingredients/steps via forced tool-use (reliable JSON, no prompt-parsing). Runs server-side since the Anthropic API key can never ship in the app bundle — same reasoning as the admin portal below. |
 
 ## What's implemented (MVP, brief section 4)
 
-- **Home feed** — a bold deep-green header banner (logo, "PassDown", notifications) with a floating search bar, a horizontally-scrolling row of colored cuisine filter chips (color is deterministic per cuisine text — same cuisine always gets the same color), and a 2-column card grid: each card shows the photo (or a colored cuisine-icon placeholder when there's no photo yet) with a cuisine badge and private-lock badge overlaid, then title, author, and like/comment/save with counts. Tapping the comment icon jumps straight to that recipe's comments and focuses the input, instead of opening the recipe and scrolling down.
-- **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share, author strip with follow, comments + "I made this!" posts. The author can delete the recipe from here; a private recipe shows a lock badge.
-- **Search & discover** — a Recipes/People toggle: recipe search (text across title/ingredients/tags, meal-type filter chips, browse-by-category grid), or a People search (by name/username, plus a "Suggested for you" list of accounts you don't already follow) with a follow button on every result.
+- **Home feed** — a bold deep-green header banner (logo, "Passed Down" wordmark, notifications), a row of Circle filter chips (jump straight to what a specific circle has shared), a floating search bar, and two compact filter dropdowns — **Cuisine** (every country, with its own search box) and **Meal Type** — replacing what used to be a wrapping row of chip bubbles. Below that, a single-column card feed: each card leads with the poster's name ("passed this down"), the photo with title overlaid, a cuisine badge, diet/occasion/meal-type tags, and like/comment/share/save/circle actions. Tapping the comment icon jumps straight to that recipe's comments and focuses the input.
+- **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share/share-to-circle, author strip with follow, comments + "I made this!" posts. The author can edit or delete the recipe from here; a private recipe shows a lock badge.
+- **Search** — people only: search by name/username, or browse a "Suggested for you" list of accounts you don't already follow, with a follow button on every result. Recipe search/filtering lives on the Home feed instead (see above), rather than being split across two tabs.
 - **Recipe Box** — saved recipes organized into named collections.
 - **Shopping list** — checkable, combines duplicate ingredients across recipes automatically.
 - **Cook Mode** — full-screen, large-text, one step at a time, keeps screen awake, per-step timer when a step has a duration.
-- **Post a recipe** — the 6-step flow from the brief (Photo → Title/Story → Ingredients → Steps → Details → Review), with a visible "Step X of 6" progress bar, Save-as-Draft support, and a Public/Private choice on the Details step (private = only your followers can see it).
-- **Profile** — own and other users' profiles, recipe grid, follow button, and tappable follower/following counts that open a list of who they are (with a follow button on each).
-- **Circles** — private named groups (open from the people icon on the Home feed banner) for bringing specific family/friends together — e.g. "Mom's Side" or "Sunday Dinner." The creator names the circle, adds people by searching name/username, and can remove anyone or delete the circle; anyone else can leave. This is the foundation for the family/friends feel from the brief's bigger vision — there's no invite/accept step yet (adding someone is immediate) and no group chat or recipe-attachment yet; both are natural next steps once this is in use.
+- **Post a recipe** — the 6-step flow from the brief (Photo → Title/Story → Ingredients → Steps → Details → Review), with a visible "Step X of 6" progress bar, Save-as-Draft support, and a Public/Private choice on the Details step (private = only your followers can see it). The Photo step's **"Scan a Recipe Card"** button reads a photo of a handwritten or printed recipe with AI (see below) and fills in title/ingredients/steps for you, jumping straight to Review. The Details step's Cuisine field is the same country picker used to filter Home, so what a recipe can be posted as always matches what it can be filtered by.
+- **Profile** — own and other users' profiles, a Your Recipes / Saved tab switcher (own profile only — Saved carries collection filter chips, a "New Collection" button, and per-recipe collection assignment), follow button, and tappable follower/following counts that open a list of who they are (with a follow button on each).
+- **Circles** — private named groups (open from the Circles tab) for bringing specific family/friends together — e.g. "Mom's Side" or "Sunday Dinner." The creator names the circle, adds people by searching name/username, and can remove anyone or delete the circle; anyone else can leave. Any member can also share a recipe into the circle (from the recipe's own "Circle" action, or the circle's own "Share a Saved Recipe" picker) — this makes the recipe visible to every member regardless of its own public/private setting, since sharing into a trusted circle is a deliberate visibility grant. There's still no invite/accept step (adding someone is immediate) or group chat — natural next steps once this is in use.
 - **Settings** — notification toggles, account, about.
 
 Ease-of-use and accessibility principles from sections 6 & 11 are applied throughout: every icon has a text label, minimum 16pt body text (system font-scaling left on, never disabled), 44×44pt minimum tap targets, high-contrast warm palette, and gentle empty-state copy.
@@ -48,12 +49,18 @@ Colors, type scale, and spacing live in `src/theme/` and follow the brief's star
 src/
   theme/        colors, typography, spacing (brief section 10)
   types/        Recipe, Ingredient, Step, Collection, ShoppingListItem, Author...
-  data/         category tiles for Search/Discover browsing
-  lib/          supabase.ts (client), database.types.ts (generated), api/ (recipes, social, collections, shoppingList, photos)
+  data/         countries.ts (the fixed cuisine/country list shared by Home's filter and Post Recipe's Details step)
+  lib/          supabase.ts (client), database.types.ts (generated), api/ (recipes, social, collections, shoppingList, photos, circles, circleRecipes, aiRecipeScan, admin)
   context/      AuthContext (real sessions) + AppStateContext (recipes/collections/etc.)
   navigation/   bottom tabs (with the emphasized center Post button) + root stack, gated on session
   screens/      one file/folder per screen from the brief's screen-by-screen breakdown, plus screens/Auth/
-  components/   RecipeCard, PrimaryButton, FilterChip, CategoryTile, EmptyState
+  components/   RecipeCard, PrimaryButton, FilterChip, DropdownButton, SelectModal, ShareToCircleModal, EmptyState
+```
+
+```
+supabase/functions/
+  admin-api/      service-role account management, gated on the admins table (see Admin portal below)
+  scan-recipe/    calls the Anthropic API server-side to read a photo of a recipe (see AI recipe scan below)
 ```
 
 ## Authentication setup
@@ -106,6 +113,7 @@ Applied to the Supabase project via migrations. The initial schema was applied d
 - `recipes` — ingredients/steps stored as JSONB (matches the app's nested shape exactly); `like_count`/`comment_count` kept in sync by triggers. `is_private` controls visibility: public recipes are visible to everyone, private ones only to the author and their followers — enforced by the table's row-level security policy itself (`supabase/migrations/..._add_recipe_privacy_and_delete.sql`), not by client-side filtering, so a private recipe is never even returned by the API to someone who isn't allowed to see it. The same migration lets an author delete their own recipe (cascading to its comments/likes/saves/etc.).
 - `comments`, `made_this_posts`, `likes`, `saves`, `follows`, `collections`, `collection_recipes`, `shopping_list_items`.
 - `circles` / `circle_members` — a circle is only visible to its own members (RLS, not client filtering); only the creator (`circles.created_by`) can add members or delete the circle, but any member can remove themselves (`supabase/migrations/..._add_circles.sql`).
+- `circle_recipes` — join table sharing a recipe into a circle; any member can add one, the adder or the circle's owner can remove it. A recipe shared into a circle gets an *additional* permissive SELECT policy on `recipes` granting visibility to that circle's members, layered on top of (not replacing) the recipe's own public/private/followers rule.
 
 Every table has row-level security: published recipes and social data (comments, likes, follows) are readable by everyone, but people can only write their own rows; saves, collections, and the shopping list are private per-account.
 
@@ -125,6 +133,24 @@ There's no separate admin login — admin-ness is a permission on a normal accou
   After that, existing admins can promote or demote other accounts right from the Manage Accounts tab.
 - **Listing every account's email and last-sign-in time, deleting accounts, and granting/revoking admin** all require Supabase's service-role key — which must never ship inside the app bundle. So this work happens in a Supabase Edge Function (`supabase/functions/admin-api/`), which itself checks the caller against the `admins` table (using the caller's own session, respecting RLS) *before* touching the service-role client. The app's `isCurrentUserAdmin()` check (`src/lib/api/admin.ts`) only gates the UI — the Edge Function is the real enforcement boundary. An admin can't delete their own account or remove their own admin access from the portal, to avoid an accidental lockout.
 - Deleting a user cascades (via each table's `on delete cascade` foreign key) to their profile, recipes, comments, likes, saves, follows, and collections automatically.
+
+## AI recipe scan
+
+The Post Recipe flow's **"Scan a Recipe Card"** button (Photo step) reads a photo of a handwritten or printed recipe and fills in the title, ingredients, and steps automatically, jumping straight to Review so the poster can check and fix up anything it misread.
+
+Same reasoning as the admin portal above: reading the photo needs an Anthropic API key, which must never ship inside the app bundle, so it happens in a Supabase Edge Function (`supabase/functions/scan-recipe/`) instead of on-device. The function checks the caller is signed in (any account, no special permission needed), then calls Claude (`claude-sonnet-5`) with the photo and a forced tool-use call (`extract_recipe`) so the response is always structured JSON rather than prose Claude's response needs to be parsed out of.
+
+To enable it:
+
+1. Get an API key from the [Anthropic Console](https://console.anthropic.com/).
+2. Deploy the function and set the key as a function secret:
+   ```bash
+   npx supabase functions deploy scan-recipe --project-ref <your-project-ref>
+   npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-... --project-ref <your-project-ref>
+   ```
+   (`SUPABASE_URL` and `SUPABASE_ANON_KEY` are already available to every Edge Function automatically — no need to set those yourself.)
+
+Until the key is set, a scan attempt fails with a normal "Could not read that recipe" error — it doesn't block the rest of Post a Recipe, since typing everything in by hand always still works.
 
 ## Next steps
 

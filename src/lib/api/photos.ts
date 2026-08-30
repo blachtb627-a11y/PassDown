@@ -17,7 +17,7 @@ const JPEG_QUALITY = 0.82;
 // these full-size files. Downscaling here (web only — no canvas on native,
 // and no image-resize library is installable in this sandbox) fixes it for
 // every future upload without touching how images are displayed.
-async function resizeForWeb(blob: Blob): Promise<Blob> {
+export async function resizeForWeb(blob: Blob): Promise<Blob> {
   if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') return blob;
 
   const bitmap = await createImageBitmap(blob);

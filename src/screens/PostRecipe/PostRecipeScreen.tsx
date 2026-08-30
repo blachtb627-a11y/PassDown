@@ -18,7 +18,8 @@ import { IngredientsStep } from './IngredientsStep';
 import { StepsStep } from './StepsStep';
 import { DetailsStep } from './DetailsStep';
 import { ReviewStep } from './ReviewStep';
-import { emptyFormState, RecipeFormState, STEP_TITLES } from './formTypes';
+import { emptyFormState, nextId, RecipeFormState, STEP_TITLES } from './formTypes';
+import { ScannedRecipe } from '../../lib/api/aiRecipeScan';
 
 function recipeToForm(recipe: Recipe): RecipeFormState {
   return {
@@ -52,6 +53,21 @@ export function PostRecipeScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const patchForm = (patch: Partial<RecipeFormState>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const handleScanned = (recipe: ScannedRecipe) => {
+    setForm((prev) => ({
+      ...prev,
+      title: recipe.title || prev.title,
+      ingredients: recipe.ingredients.length
+        ? recipe.ingredients.map((i) => ({ id: nextId('ing'), quantity: i.quantity ?? '', unit: i.unit ?? '', item: i.item }))
+        : prev.ingredients,
+      steps: recipe.steps.length ? recipe.steps.map((text) => ({ id: nextId('step'), text })) : prev.steps,
+      servings: recipe.servings ? String(recipe.servings) : prev.servings,
+      prepMinutes: recipe.prepMinutes ? String(recipe.prepMinutes) : prev.prepMinutes,
+      cookMinutes: recipe.cookMinutes ? String(recipe.cookMinutes) : prev.cookMinutes,
+    }));
+    setStepIndex(STEP_TITLES.length - 1);
+  };
 
   const canGoNext = () => {
     switch (stepIndex) {
@@ -127,7 +143,9 @@ export function PostRecipeScreen() {
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.flex}>
-          {stepIndex === 0 && <PhotoStep photos={form.photos} onChange={(photos) => patchForm({ photos })} />}
+          {stepIndex === 0 && (
+            <PhotoStep photos={form.photos} onChange={(photos) => patchForm({ photos })} onScanned={handleScanned} />
+          )}
           {stepIndex === 1 && (
             <TitleStoryStep
               title={form.title}
