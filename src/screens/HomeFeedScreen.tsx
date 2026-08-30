@@ -13,6 +13,10 @@ import { useTheme } from '../theme/ThemeContext';
 import { getCuisineColor } from '../theme/cuisineColors';
 import { radius, spacing } from '../theme/typography';
 import { RootStackParamList } from '../navigation/types';
+import { MealType } from '../types/recipe';
+
+const MEAL_TYPES: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Drink'];
+type FilterTab = 'cuisine' | 'mealType';
 
 export function HomeFeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -21,6 +25,8 @@ export function HomeFeedScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
+  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
+  const [activeFilterTab, setActiveFilterTab] = useState<FilterTab>('cuisine');
 
   const [circles, setCircles] = useState<CircleSummary[]>([]);
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
@@ -66,11 +72,14 @@ export function HomeFeedScreen() {
     return publishedRecipes.filter((r) => {
       if (memberIds && !memberIds.has(r.author.id)) return false;
       if (selectedCuisine && r.cuisine !== selectedCuisine) return false;
+      if (selectedMealType && r.mealType !== selectedMealType) return false;
       if (!q) return true;
-      const haystack = [r.title, r.cuisine ?? '', ...r.ingredients.map((i) => i.item)].join(' ').toLowerCase();
+      const haystack = [r.title, r.cuisine ?? '', r.mealType ?? '', ...r.ingredients.map((i) => i.item)]
+        .join(' ')
+        .toLowerCase();
       return haystack.includes(q);
     });
-  }, [publishedRecipes, query, selectedCuisine, selectedCircleId, circleMemberIds]);
+  }, [publishedRecipes, query, selectedCuisine, selectedMealType, selectedCircleId, circleMemberIds]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -129,20 +138,69 @@ export function HomeFeedScreen() {
           maxToRenderPerBatch={6}
           windowSize={5}
           ListHeaderComponent={
-            cuisines.length > 0 ? (
-              <View style={styles.chipsRow}>
-                <FilterChip label="All" selected={!selectedCuisine} onPress={() => setSelectedCuisine(null)} />
-                {cuisines.map((c) => (
-                  <FilterChip
-                    key={c}
-                    label={c}
-                    selected={selectedCuisine === c}
-                    color={getCuisineColor(c)}
-                    onPress={() => setSelectedCuisine((prev) => (prev === c ? null : c))}
-                  />
-                ))}
+            <View>
+              <View style={styles.filterTabRow}>
+                <Pressable
+                  style={[styles.filterTabButton, activeFilterTab === 'cuisine' && styles.filterTabButtonActive]}
+                  onPress={() => setActiveFilterTab('cuisine')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: activeFilterTab === 'cuisine' }}
+                >
+                  <Text
+                    style={[
+                      typography.bodyBold,
+                      activeFilterTab === 'cuisine' ? styles.filterTabTextActive : styles.filterTabTextInactive,
+                    ]}
+                  >
+                    Cuisine{selectedCuisine ? `: ${selectedCuisine}` : ''}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.filterTabButton, activeFilterTab === 'mealType' && styles.filterTabButtonActive]}
+                  onPress={() => setActiveFilterTab('mealType')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: activeFilterTab === 'mealType' }}
+                >
+                  <Text
+                    style={[
+                      typography.bodyBold,
+                      activeFilterTab === 'mealType' ? styles.filterTabTextActive : styles.filterTabTextInactive,
+                    ]}
+                  >
+                    Meal Type{selectedMealType ? `: ${selectedMealType}` : ''}
+                  </Text>
+                </Pressable>
               </View>
-            ) : null
+
+              {activeFilterTab === 'cuisine' ? (
+                cuisines.length > 0 ? (
+                  <View style={styles.chipsRow}>
+                    <FilterChip label="All" selected={!selectedCuisine} onPress={() => setSelectedCuisine(null)} />
+                    {cuisines.map((c) => (
+                      <FilterChip
+                        key={c}
+                        label={c}
+                        selected={selectedCuisine === c}
+                        color={getCuisineColor(c)}
+                        onPress={() => setSelectedCuisine((prev) => (prev === c ? null : c))}
+                      />
+                    ))}
+                  </View>
+                ) : null
+              ) : (
+                <View style={styles.chipsRow}>
+                  <FilterChip label="All" selected={!selectedMealType} onPress={() => setSelectedMealType(null)} />
+                  {MEAL_TYPES.map((type) => (
+                    <FilterChip
+                      key={type}
+                      label={type}
+                      selected={selectedMealType === type}
+                      onPress={() => setSelectedMealType((prev) => (prev === type ? null : type))}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
           }
           ListEmptyComponent={
             <EmptyState
@@ -150,7 +208,7 @@ export function HomeFeedScreen() {
               message={
                 publishedRecipes.length === 0
                   ? 'No recipes yet — tap "Post" to share the first one!'
-                  : 'No recipes matched — try a different search or cuisine.'
+                  : 'No recipes matched — try a different search or filter.'
               }
             />
           }
@@ -220,7 +278,20 @@ function createStyles(colors: AppColors) {
       backgroundColor: colors.surface,
     },
     searchInput: { flex: 1, color: colors.text, paddingVertical: spacing.sm },
-    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingTop: spacing.md, paddingBottom: spacing.xs },
+    filterTabRow: { flexDirection: 'row', marginTop: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+    filterTabButton: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      minHeight: 44,
+      justifyContent: 'center',
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+    },
+    filterTabButtonActive: { borderBottomColor: colors.secondary },
+    filterTabTextActive: { color: colors.secondary },
+    filterTabTextInactive: { color: colors.textMuted },
+    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingTop: spacing.sm, paddingBottom: spacing.xs },
     listContent: {
       paddingHorizontal: spacing.md,
       paddingBottom: spacing.xl,
