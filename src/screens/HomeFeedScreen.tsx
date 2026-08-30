@@ -18,11 +18,14 @@ import { MealType } from '../types/recipe';
 
 const MEAL_TYPES: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Drink'];
 
+type FeedTab = 'public' | 'following';
+
 export function HomeFeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { recipes, savedRecipeIds, likedRecipeIds, toggleSaveRecipe, toggleLikeRecipe } = useAppState();
+  const { recipes, savedRecipeIds, likedRecipeIds, followedAuthorIds, toggleSaveRecipe, toggleLikeRecipe } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [feedTab, setFeedTab] = useState<FeedTab>('public');
   const [query, setQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
@@ -58,6 +61,7 @@ export function HomeFeedScreen() {
     const q = query.trim().toLowerCase();
     const memberIds = selectedCircleId ? circleMemberIds[selectedCircleId] : null;
     return publishedRecipes.filter((r) => {
+      if (feedTab === 'following' && !followedAuthorIds.includes(r.author.id)) return false;
       if (memberIds && !memberIds.has(r.author.id)) return false;
       if (selectedCuisine && r.cuisine !== selectedCuisine) return false;
       if (selectedMealType && r.mealType !== selectedMealType) return false;
@@ -67,7 +71,7 @@ export function HomeFeedScreen() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [publishedRecipes, query, selectedCuisine, selectedMealType, selectedCircleId, circleMemberIds]);
+  }, [publishedRecipes, query, selectedCuisine, selectedMealType, selectedCircleId, circleMemberIds, feedTab, followedAuthorIds]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,16 +130,44 @@ export function HomeFeedScreen() {
           maxToRenderPerBatch={6}
           windowSize={5}
           ListHeaderComponent={
-            <View style={styles.filterRow}>
-              <DropdownButton label="Cuisine" value={selectedCuisine} onPress={() => setIsCuisineModalOpen(true)} />
-              <DropdownButton label="Meal Type" value={selectedMealType} onPress={() => setIsMealTypeModalOpen(true)} />
-            </View>
+            <>
+              <View style={styles.tabRow}>
+                <Pressable
+                  style={[styles.tabButton, feedTab === 'public' && styles.tabButtonActive]}
+                  onPress={() => setFeedTab('public')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Public feed"
+                  accessibilityState={{ selected: feedTab === 'public' }}
+                >
+                  <Text style={[typography.bodyBold, feedTab === 'public' ? styles.tabTextActive : styles.tabTextInactive]}>
+                    Public
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.tabButton, feedTab === 'following' && styles.tabButtonActive]}
+                  onPress={() => setFeedTab('following')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Following feed"
+                  accessibilityState={{ selected: feedTab === 'following' }}
+                >
+                  <Text style={[typography.bodyBold, feedTab === 'following' ? styles.tabTextActive : styles.tabTextInactive]}>
+                    Following
+                  </Text>
+                </Pressable>
+              </View>
+              <View style={styles.filterRow}>
+                <DropdownButton label="Cuisine" value={selectedCuisine} onPress={() => setIsCuisineModalOpen(true)} />
+                <DropdownButton label="Meal Type" value={selectedMealType} onPress={() => setIsMealTypeModalOpen(true)} />
+              </View>
+            </>
           }
           ListEmptyComponent={
             <EmptyState
               icon="restaurant-outline"
               message={
-                publishedRecipes.length === 0
+                feedTab === 'following' && followedAuthorIds.length === 0
+                  ? "You're not following anyone yet — follow people from Search to see their recipes here."
+                  : publishedRecipes.length === 0
                   ? 'No recipes yet — tap "Post" to share the first one!'
                   : 'No recipes matched — try a different search or filter.'
               }
@@ -225,6 +257,19 @@ function createStyles(colors: AppColors) {
       backgroundColor: colors.surface,
     },
     searchInput: { flex: 1, color: colors.text, paddingVertical: spacing.sm },
+    tabRow: { flexDirection: 'row', marginTop: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+    tabButton: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      minHeight: 44,
+      justifyContent: 'center',
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+    },
+    tabButtonActive: { borderBottomColor: colors.secondary },
+    tabTextActive: { color: colors.secondary },
+    tabTextInactive: { color: colors.textMuted },
     filterRow: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.md, paddingBottom: spacing.sm },
     listContent: {
       paddingHorizontal: spacing.md,
