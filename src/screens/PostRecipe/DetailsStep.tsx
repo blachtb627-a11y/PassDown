@@ -1,7 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Diet, Difficulty, MealType, Occasion } from '../../types/recipe';
 import { FilterChip } from '../../components/FilterChip';
+import { DropdownButton } from '../../components/DropdownButton';
+import { SelectModal } from '../../components/SelectModal';
+import { countries } from '../../data/countries';
 import { AppColors } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../../theme/typography';
@@ -48,6 +51,7 @@ export function DetailsStep({
 }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
+  const [isCuisineModalOpen, setIsCuisineModalOpen] = useState(false);
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={typography.title}>A few details</Text>
@@ -90,12 +94,23 @@ export function DetailsStep({
       </View>
 
       <Text style={[typography.bodyBold, styles.label]}>Cuisine</Text>
-      <TextInput
-        style={[styles.input, styles.fullInput]}
-        placeholder="e.g., Italian, Mexican, American"
-        placeholderTextColor={colors.textMuted}
-        value={cuisine}
-        onChangeText={(v) => onChange({ cuisine: v })}
+      <View style={styles.fullInput}>
+        <DropdownButton
+          label="Country"
+          value={cuisine || null}
+          placeholder="Choose a country"
+          onPress={() => setIsCuisineModalOpen(true)}
+        />
+      </View>
+      <SelectModal
+        visible={isCuisineModalOpen}
+        title="Cuisine"
+        options={countries}
+        selected={cuisine || null}
+        onSelect={(v) => onChange({ cuisine: v ?? '' })}
+        onClose={() => setIsCuisineModalOpen(false)}
+        allLabel="None"
+        searchable
       />
 
       <Text style={[typography.bodyBold, styles.label]}>Meal Type</Text>

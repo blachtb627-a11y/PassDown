@@ -4,19 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RecipeCard } from '../components/RecipeCard';
-import { FilterChip } from '../components/FilterChip';
+import { DropdownButton } from '../components/DropdownButton';
+import { SelectModal } from '../components/SelectModal';
 import { EmptyState } from '../components/EmptyState';
 import { useAppState } from '../context/AppStateContext';
 import { CircleSummary, fetchCircleMembers, fetchMyCircles } from '../lib/api/circles';
+import { countries } from '../data/countries';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
-import { getCuisineColor } from '../theme/cuisineColors';
 import { radius, spacing } from '../theme/typography';
 import { RootStackParamList } from '../navigation/types';
 import { MealType } from '../types/recipe';
 
 const MEAL_TYPES: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Drink'];
-type FilterTab = 'cuisine' | 'mealType';
 
 export function HomeFeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -26,7 +26,8 @@ export function HomeFeedScreen() {
   const [query, setQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
-  const [activeFilterTab, setActiveFilterTab] = useState<FilterTab>('cuisine');
+  const [isCuisineModalOpen, setIsCuisineModalOpen] = useState(false);
+  const [isMealTypeModalOpen, setIsMealTypeModalOpen] = useState(false);
 
   const [circles, setCircles] = useState<CircleSummary[]>([]);
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
@@ -52,19 +53,6 @@ export function HomeFeedScreen() {
   };
 
   const publishedRecipes = useMemo(() => recipes.filter((r) => !r.isDraft), [recipes]);
-
-  const cuisines = useMemo(() => {
-    const seen = new Set<string>();
-    const list: string[] = [];
-    for (const r of publishedRecipes) {
-      const c = r.cuisine?.trim();
-      if (c && !seen.has(c.toLowerCase())) {
-        seen.add(c.toLowerCase());
-        list.push(c);
-      }
-    }
-    return list.sort((a, b) => a.localeCompare(b));
-  }, [publishedRecipes]);
 
   const visibleRecipes = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -138,68 +126,9 @@ export function HomeFeedScreen() {
           maxToRenderPerBatch={6}
           windowSize={5}
           ListHeaderComponent={
-            <View>
-              <View style={styles.filterTabRow}>
-                <Pressable
-                  style={[styles.filterTabButton, activeFilterTab === 'cuisine' && styles.filterTabButtonActive]}
-                  onPress={() => setActiveFilterTab('cuisine')}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: activeFilterTab === 'cuisine' }}
-                >
-                  <Text
-                    style={[
-                      typography.bodyBold,
-                      activeFilterTab === 'cuisine' ? styles.filterTabTextActive : styles.filterTabTextInactive,
-                    ]}
-                  >
-                    Cuisine{selectedCuisine ? `: ${selectedCuisine}` : ''}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.filterTabButton, activeFilterTab === 'mealType' && styles.filterTabButtonActive]}
-                  onPress={() => setActiveFilterTab('mealType')}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: activeFilterTab === 'mealType' }}
-                >
-                  <Text
-                    style={[
-                      typography.bodyBold,
-                      activeFilterTab === 'mealType' ? styles.filterTabTextActive : styles.filterTabTextInactive,
-                    ]}
-                  >
-                    Meal Type{selectedMealType ? `: ${selectedMealType}` : ''}
-                  </Text>
-                </Pressable>
-              </View>
-
-              {activeFilterTab === 'cuisine' ? (
-                cuisines.length > 0 ? (
-                  <View style={styles.chipsRow}>
-                    <FilterChip label="All" selected={!selectedCuisine} onPress={() => setSelectedCuisine(null)} />
-                    {cuisines.map((c) => (
-                      <FilterChip
-                        key={c}
-                        label={c}
-                        selected={selectedCuisine === c}
-                        color={getCuisineColor(c)}
-                        onPress={() => setSelectedCuisine((prev) => (prev === c ? null : c))}
-                      />
-                    ))}
-                  </View>
-                ) : null
-              ) : (
-                <View style={styles.chipsRow}>
-                  <FilterChip label="All" selected={!selectedMealType} onPress={() => setSelectedMealType(null)} />
-                  {MEAL_TYPES.map((type) => (
-                    <FilterChip
-                      key={type}
-                      label={type}
-                      selected={selectedMealType === type}
-                      onPress={() => setSelectedMealType((prev) => (prev === type ? null : type))}
-                    />
-                  ))}
-                </View>
-              )}
+            <View style={styles.filterRow}>
+              <DropdownButton label="Cuisine" value={selectedCuisine} onPress={() => setIsCuisineModalOpen(true)} />
+              <DropdownButton label="Meal Type" value={selectedMealType} onPress={() => setIsMealTypeModalOpen(true)} />
             </View>
           }
           ListEmptyComponent={
@@ -225,6 +154,24 @@ export function HomeFeedScreen() {
           )}
         />
       </View>
+
+      <SelectModal
+        visible={isCuisineModalOpen}
+        title="Cuisine"
+        options={countries}
+        selected={selectedCuisine}
+        onSelect={setSelectedCuisine}
+        onClose={() => setIsCuisineModalOpen(false)}
+        searchable
+      />
+      <SelectModal
+        visible={isMealTypeModalOpen}
+        title="Meal Type"
+        options={MEAL_TYPES}
+        selected={selectedMealType}
+        onSelect={(v) => setSelectedMealType(v as MealType | null)}
+        onClose={() => setIsMealTypeModalOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -278,20 +225,7 @@ function createStyles(colors: AppColors) {
       backgroundColor: colors.surface,
     },
     searchInput: { flex: 1, color: colors.text, paddingVertical: spacing.sm },
-    filterTabRow: { flexDirection: 'row', marginTop: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-    filterTabButton: {
-      flex: 1,
-      alignItems: 'center',
-      paddingVertical: spacing.sm,
-      minHeight: 44,
-      justifyContent: 'center',
-      borderBottomWidth: 2,
-      borderBottomColor: 'transparent',
-    },
-    filterTabButtonActive: { borderBottomColor: colors.secondary },
-    filterTabTextActive: { color: colors.secondary },
-    filterTabTextInactive: { color: colors.textMuted },
-    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingTop: spacing.sm, paddingBottom: spacing.xs },
+    filterRow: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.md, paddingBottom: spacing.sm },
     listContent: {
       paddingHorizontal: spacing.md,
       paddingBottom: spacing.xl,
