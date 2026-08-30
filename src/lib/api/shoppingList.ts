@@ -92,15 +92,11 @@ export async function fetchShoppingList(userId: string): Promise<ShoppingListIte
 
 export async function addRecipeIngredientsToShoppingList(userId: string, recipe: Recipe): Promise<void> {
   const existing = await fetchShoppingList(userId);
-  // Ignores items already linked to this same recipe, so re-adding it (e.g.
-  // after editing) merges into other recipes' entries, not a leftover from an
-  // earlier add of this exact recipe.
-  const mergeableExisting = existing.filter((item) => !item.fromRecipeIds.includes(recipe.id));
   const newIngredients = recipe.ingredients.map((i) => ({ item: i.item, quantity: i.quantity, unit: i.unit }));
 
   let decisions: MergeDecision[] | null = null;
   try {
-    decisions = await requestMergePlan(mergeableExisting, newIngredients);
+    decisions = await requestMergePlan(existing, newIngredients);
   } catch (error) {
     console.error('AI shopping list merge failed, falling back to exact-match combining', error);
   }
@@ -118,7 +114,7 @@ export async function addRecipeIngredientsToShoppingList(userId: string, recipe:
             item: decision.item,
             quantity: decision.quantity,
             unit: decision.unit,
-            from_recipe_ids: [...existingItem.fromRecipeIds, recipe.id],
+            from_recipe_ids: Array.from(new Set([...existingItem.fromRecipeIds, recipe.id])),
           })
           .eq('id', existingItem.id);
         if (error) throw error;
@@ -138,14 +134,14 @@ export async function addRecipeIngredientsToShoppingList(userId: string, recipe:
 
   for (const ingredient of recipe.ingredients) {
     const key = normalizeItemKey(ingredient.item, ingredient.unit);
-    const existingItem = mergeableExisting.find((item) => normalizeItemKey(item.item, item.unit) === key);
+    const existingItem = existing.find((item) => normalizeItemKey(item.item, item.unit) === key);
 
     if (existingItem) {
       const { error } = await supabase
         .from('shopping_list_items')
         .update({
           quantity: sumQuantities(existingItem.quantity, ingredient.quantity),
-          from_recipe_ids: [...existingItem.fromRecipeIds, recipe.id],
+          from_recipe_ids: Array.from(new Set([...existingItem.fromRecipeIds, recipe.id])),
         })
         .eq('id', existingItem.id);
       if (error) throw error;
