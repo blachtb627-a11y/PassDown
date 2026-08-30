@@ -20,11 +20,12 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 | Cook Mode | `expo-keep-awake` | Keeps the screen from sleeping while cooking, per section 4.8. |
 | AI recipe scan | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Reads a photo of a handwritten/printed recipe and returns structured title/ingredients/steps via forced tool-use (reliable JSON, no prompt-parsing). Runs server-side since the Anthropic API key can never ship in the app bundle — same reasoning as the admin portal below. |
 | AI shopping list merge | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Decides, for each ingredient being added, whether it's the same grocery item as something already on the list even if worded differently (e.g. "bell pepper" vs "red pepper, diced") and what the combined quantity should be — same forced tool-use approach and same reason it's server-side, see below. |
+| AI recipe translation | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Translates a recipe's title/story/ingredients/steps to English and converts metric units to US customary ones, on demand from a button on Recipe Detail — same forced tool-use approach and same reason it's server-side, see below. |
 
 ## What's implemented (MVP, brief section 4)
 
 - **Home feed** — a bold deep-green header banner (logo, "Passed Down" wordmark, notifications), a row of Circle filter chips (jump straight to what a specific circle has shared), a floating search bar, and two compact filter dropdowns — **Cuisine** (every country, with its own search box) and **Meal Type** — replacing what used to be a wrapping row of chip bubbles. Below that, a single-column card feed: each card leads with the poster's name ("passed this down"), the photo with title overlaid, a cuisine badge, diet/occasion/meal-type tags, and like/comment/share/save/circle actions. Tapping the comment icon jumps straight to that recipe's comments and focuses the input.
-- **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share/share-to-circle, author strip with follow, comments + "I made this!" posts. The author can edit or delete the recipe from here; a private recipe shows a lock badge.
+- **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share/share-to-circle, author strip with follow, comments + "I made this!" posts. The author can edit or delete the recipe from here; a private recipe shows a lock badge. A **Translate** button in the top-right of the header (see AI recipe translation below) translates the whole recipe to English and converts its units to US customary measurements, with a tap to flip back to the original.
 - **Search** — people only: search by name/username, or browse a "Suggested for you" list of accounts you don't already follow, with a follow button on every result. Recipe search/filtering lives on the Home feed instead (see above), rather than being split across two tabs.
 - **Recipe Box** — saved recipes organized into named collections.
 - **Shopping list** — checkable, combines matching ingredients across recipes automatically (including differently-worded matches, e.g. "1 pepper" + "2 peppers" → "3 pepper", via AI — see below), falling back to an exact-match numeric sum if that call fails.
@@ -51,7 +52,7 @@ src/
   theme/        colors, typography, spacing (brief section 10)
   types/        Recipe, Ingredient, Step, Collection, ShoppingListItem, Author...
   data/         countries.ts (the fixed cuisine/country list shared by Home's filter and Post Recipe's Details step)
-  lib/          supabase.ts (client), database.types.ts (generated), api/ (recipes, social, collections, shoppingList, photos, circles, circleRecipes, aiRecipeScan, admin)
+  lib/          supabase.ts (client), database.types.ts (generated), api/ (recipes, social, collections, shoppingList, photos, circles, circleRecipes, aiRecipeScan, translateRecipe, admin)
   context/      AuthContext (real sessions) + AppStateContext (recipes/collections/etc.)
   navigation/   bottom tabs (with the emphasized center Post button) + root stack, gated on session
   screens/      one file/folder per screen from the brief's screen-by-screen breakdown, plus screens/Auth/
@@ -63,6 +64,7 @@ supabase/functions/
   admin-api/            service-role account management, gated on the admins table (see Admin portal below)
   scan-recipe/          calls the Anthropic API server-side to read a photo of a recipe (see AI recipe scan below)
   merge-shopping-list/  calls the Anthropic API server-side to decide how to combine ingredients on the shopping list (see AI shopping list merge below)
+  translate-recipe/     calls the Anthropic API server-side to translate a recipe and convert its units (see AI recipe translation below)
 ```
 
 ## Authentication setup
@@ -163,6 +165,15 @@ If that call fails for any reason (key not set, network error, etc.), it falls b
 It uses the same Anthropic API key as the recipe scan above, and Edge Function secrets are shared across every function in a project, so no extra setup is needed if `scan-recipe` is already deployed with `ANTHROPIC_API_KEY` set — just deploy the new function itself:
 ```bash
 npx supabase functions deploy merge-shopping-list --project-ref <your-project-ref>
+```
+
+## AI recipe translation
+
+Recipe Detail has a **Translate** button in the top-right of the header. Tapping it sends the recipe's title, story, ingredients, and steps to a Supabase Edge Function (`supabase/functions/translate-recipe/`), which asks Claude (`claude-sonnet-5`) — via a forced tool-use call, `translate_recipe` — to translate everything into English and convert any metric or otherwise non-US units (grams, milliliters, Celsius, etc.) into US customary cooking units (cups, tablespoons, ounces, °F), rounded to sensible measurements rather than exact decimals. If the recipe was already in English, only the unit conversion happens, and a brief note says so. Tapping the button again flips back to the original — the translation is only ever shown to the viewer, never written back to the recipe or seen by anyone else, so the original recipe (and other viewers' language/units) is never touched.
+
+Uses the same Anthropic API key as the two Edge Functions above, so — same as `merge-shopping-list` — no new secret is needed if one of those is already deployed:
+```bash
+npx supabase functions deploy translate-recipe --project-ref <your-project-ref>
 ```
 
 ## Next steps

@@ -1,5 +1,17 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Dimensions, FlatList, Image, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,11 +21,21 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
 import { ShareToCircleModal } from '../components/ShareToCircleModal';
 import { confirm, getErrorMessage, notify } from '../lib/alert';
+import { translateRecipe, TranslatedRecipe } from '../lib/api/translateRecipe';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
 
 const { width } = Dimensions.get('window');
+
+const headerButtonStyle = {
+  minWidth: 44,
+  minHeight: 44,
+  paddingHorizontal: spacing.sm,
+  flexDirection: 'row' as const,
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+};
 
 export function RecipeDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -40,11 +62,65 @@ export function RecipeDetailScreen() {
   const [commentText, setCommentText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAddingToShoppingList, setIsAddingToShoppingList] = useState(false);
+  const [translation, setTranslation] = useState<TranslatedRecipe | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [showTranslated, setShowTranslated] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const hasScrolledToComments = useRef(false);
 
   const [isCircleModalOpen, setIsCircleModalOpen] = useState(false);
+
+  const handleTranslatePress = async () => {
+    if (!recipe || isTranslating) return;
+    if (translation) {
+      setShowTranslated((prev) => !prev);
+      return;
+    }
+    setIsTranslating(true);
+    try {
+      const result = await translateRecipe(recipe);
+      setTranslation(result);
+      setShowTranslated(true);
+      if (result.sourceLanguage.toLowerCase() === 'english') {
+        notify('Units converted', 'That recipe was already in English — units were converted to US measurements.');
+      }
+    } catch (error) {
+      notify('Could not translate this recipe', getErrorMessage(error, 'Please try again.'));
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  useLayoutEffect(() => {
+    if (!recipe) {
+      navigation.setOptions({ headerRight: undefined });
+      return;
+    }
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          onPress={handleTranslatePress}
+          disabled={isTranslating}
+          accessibilityRole="button"
+          accessibilityLabel={showTranslated ? 'Show original' : 'Translate to English'}
+          style={headerButtonStyle}
+        >
+          {isTranslating ? (
+            <ActivityIndicator size="small" color={colors.secondary} />
+          ) : (
+            <>
+              <Ionicons name={showTranslated ? 'language' : 'language-outline'} size={18} color={colors.secondary} />
+              <Text style={{ color: colors.secondary, fontWeight: '600', fontSize: 13, marginLeft: 4 }}>
+                {showTranslated ? 'Original' : 'Translate'}
+              </Text>
+            </>
+          )}
+        </Pressable>
+      ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, recipe?.id, isTranslating, showTranslated, translation, colors]);
 
   if (!recipe) {
     return <EmptyState icon="alert-circle-outline" message="This recipe couldn't be found." />;
@@ -55,6 +131,19 @@ export function RecipeDetailScreen() {
   const isFollowing = followedAuthorIds.includes(recipe.author.id);
   const isOwnRecipe = recipe.author.id === currentUser.id;
   const totalTime = (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
+
+  const isShowingTranslation = showTranslated && !!translation;
+  const displayTitle = isShowingTranslation ? translation!.title : recipe.title;
+  const displayStory = isShowingTranslation ? translation!.story || undefined : recipe.story;
+  const displayIngredients = isShowingTranslation
+    ? recipe.ingredients.map((ing, i) => {
+        const t = translation!.ingredients[i];
+        return t ? { ...ing, quantity: t.quantity, unit: t.unit, item: t.item } : ing;
+      })
+    : recipe.ingredients;
+  const displaySteps = isShowingTranslation
+    ? recipe.steps.map((step, i) => ({ ...step, text: translation!.steps[i] ?? step.text }))
+    : recipe.steps;
 
   const activity = useMemo(() => {
     const madeThis = recipe.madeThisPosts.map((m) => ({ type: 'madeThis' as const, data: m, key: m.id }));
@@ -94,7 +183,7 @@ export function RecipeDetailScreen() {
 
       <View style={styles.section}>
         <View style={styles.titleRow}>
-          <Text style={[typography.title, styles.titleText]}>{recipe.title}</Text>
+          <Text style={[typography.title, styles.titleText]}>{displayTitle}</Text>
           {recipe.isPrivate ? (
             <View style={styles.privateBadge}>
               <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
@@ -102,7 +191,12 @@ export function RecipeDetailScreen() {
             </View>
           ) : null}
         </View>
-        {recipe.story ? <Text style={[typography.body, styles.story]}>{recipe.story}</Text> : null}
+        {isShowingTranslation ? (
+          <Text style={[typography.meta, styles.translatedNote]}>
+            Translated from {translation!.sourceLanguage} · units converted to US measurements
+          </Text>
+        ) : null}
+        {displayStory ? <Text style={[typography.body, styles.story]}>{displayStory}</Text> : null}
 
         <View style={styles.statsRow}>
           {totalTime > 0 ? <Text style={typography.meta}>⏱ {totalTime} min total</Text> : null}
@@ -202,7 +296,7 @@ export function RecipeDetailScreen() {
 
       <View style={styles.section}>
         <Text style={typography.subtitle}>Ingredients</Text>
-        {recipe.ingredients.map((ing) => {
+        {displayIngredients.map((ing) => {
           const checked = !!checkedIngredients[ing.id];
           return (
             <Pressable
@@ -228,7 +322,7 @@ export function RecipeDetailScreen() {
 
       <View style={styles.section}>
         <Text style={typography.subtitle}>Steps</Text>
-        {recipe.steps.map((step, index) => (
+        {displaySteps.map((step, index) => (
           <View key={step.id} style={styles.stepRow}>
             <View style={styles.stepNumber}>
               <Text style={[typography.bodyBold, { color: colors.white }]}>{index + 1}</Text>
@@ -332,6 +426,7 @@ function createStyles(colors: AppColors, typography: AppTypography) {
   titleText: { flexShrink: 1 },
   privateBadge: { flexDirection: 'row', alignItems: 'center' },
   story: { marginTop: spacing.sm, fontStyle: 'italic' },
+  translatedNote: { marginTop: spacing.xs, color: colors.textMuted },
   statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, flexWrap: 'wrap' },
   actionsBar: {
     flexDirection: 'row',
