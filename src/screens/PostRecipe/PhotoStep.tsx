@@ -21,6 +21,7 @@ export function PhotoStep({ photos, onChange, onScanned }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [isScanning, setIsScanning] = useState(false);
+  const [scannedCardUri, setScannedCardUri] = useState<string | null>(null);
 
   const addFromLibrary = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -61,8 +62,11 @@ export function PhotoStep({ photos, onChange, onScanned }: Props) {
     try {
       const recipe = await scanRecipePhoto(photoUri);
       // The card photo itself is only used to read the recipe — it's never
-      // added to the recipe's own photos. The user still needs a real photo
-      // of the finished dish, added below with the normal buttons.
+      // added to the recipe's own photos. It's kept in local state purely so
+      // a small "scanned" thumbnail can show it was read. The user still
+      // needs a real photo of the finished dish, added below with the
+      // normal buttons.
+      setScannedCardUri(photoUri);
       onScanned(recipe);
       notify('Recipe scanned!', 'Now add a photo of the finished dish below, then look over the rest before posting.');
     } catch (error) {
@@ -115,6 +119,19 @@ export function PhotoStep({ photos, onChange, onScanned }: Props) {
             </View>
           </View>
         )}
+
+        {scannedCardUri && !isScanning ? (
+          <View style={styles.scannedRow}>
+            <Image source={{ uri: scannedCardUri }} style={styles.scannedThumb} />
+            <View style={{ flex: 1 }}>
+              <View style={styles.scannedBadge}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                <Text style={[typography.bodyBold, styles.scannedText]}> Recipe scanned</Text>
+              </View>
+              <Text style={[typography.meta, styles.scannedHint]}>Now add a photo of the finished dish below.</Text>
+            </View>
+          </View>
+        ) : null}
       </View>
 
       <Text style={typography.title}>Add a photo</Text>
@@ -168,6 +185,19 @@ function createStyles(colors: AppColors) {
     scanButtonWrapper: { flex: 1 },
     scanLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 44 },
     scanLoadingText: { color: colors.secondary },
+    scannedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    scannedThumb: { width: 48, height: 48, borderRadius: radius.sm, backgroundColor: colors.border },
+    scannedBadge: { flexDirection: 'row', alignItems: 'center' },
+    scannedText: { color: colors.success },
+    scannedHint: { color: colors.textMuted, marginTop: 2 },
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
     photoWrapper: { width: 100, height: 100 },
     photo: { width: '100%', height: '100%', borderRadius: radius.md, backgroundColor: colors.border },
