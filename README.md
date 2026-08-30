@@ -19,6 +19,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 | Images | `expo-image-picker` + Supabase Storage | Camera + photo library picking, uploaded to a public `recipe-photos` bucket so photos are visible to every user, not just the device that took them. On web, photos are downscaled (capped at 1600px on the long edge, JPEG quality 0.82) client-side via canvas before upload — a phone photo can be 10+ MB at full resolution, which made the feed feel slow since every card was fetching a full-size photo just to show a small thumbnail. |
 | Cook Mode | `expo-keep-awake` | Keeps the screen from sleeping while cooking, per section 4.8. |
 | AI recipe scan | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Reads a photo of a handwritten/printed recipe and returns structured title/ingredients/steps via forced tool-use (reliable JSON, no prompt-parsing). Runs server-side since the Anthropic API key can never ship in the app bundle — same reasoning as the admin portal below. |
+| AI shopping list merge | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Decides, for each ingredient being added, whether it's the same grocery item as something already on the list even if worded differently (e.g. "bell pepper" vs "red pepper, diced") and what the combined quantity should be — same forced tool-use approach and same reason it's server-side, see below. |
 
 ## What's implemented (MVP, brief section 4)
 
@@ -26,7 +27,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 - **Recipe detail** — swipeable hero photos, checkable ingredients, numbered steps, Start Cook Mode, Add to Shopping List, save/like/share/share-to-circle, author strip with follow, comments + "I made this!" posts. The author can edit or delete the recipe from here; a private recipe shows a lock badge.
 - **Search** — people only: search by name/username, or browse a "Suggested for you" list of accounts you don't already follow, with a follow button on every result. Recipe search/filtering lives on the Home feed instead (see above), rather than being split across two tabs.
 - **Recipe Box** — saved recipes organized into named collections.
-- **Shopping list** — checkable, combines duplicate ingredients across recipes automatically.
+- **Shopping list** — checkable, combines matching ingredients across recipes automatically (including differently-worded matches, e.g. "1 pepper" + "2 peppers" → "3 pepper", via AI — see below), falling back to an exact-match numeric sum if that call fails.
 - **Cook Mode** — full-screen, large-text, one step at a time, keeps screen awake, per-step timer when a step has a duration.
 - **Post a recipe** — the 6-step flow from the brief (Photo → Title/Story → Ingredients → Steps → Details → Review), with a visible "Step X of 6" progress bar, Save-as-Draft support, and a Public/Private choice on the Details step (private = only your followers can see it). The Photo step's **"Scan a Recipe Card"** button reads a photo of a handwritten or printed recipe with AI (see below) and fills in title/ingredients/steps for you, jumping straight to Review. The Details step's Cuisine field is the same country picker used to filter Home, so what a recipe can be posted as always matches what it can be filtered by.
 - **Profile** — own and other users' profiles, a Your Recipes / Saved tab switcher (own profile only — Saved carries collection filter chips, a "New Collection" button, and per-recipe collection assignment), follow button, and tappable follower/following counts that open a list of who they are (with a follow button on each).
@@ -59,8 +60,9 @@ src/
 
 ```
 supabase/functions/
-  admin-api/      service-role account management, gated on the admins table (see Admin portal below)
-  scan-recipe/    calls the Anthropic API server-side to read a photo of a recipe (see AI recipe scan below)
+  admin-api/            service-role account management, gated on the admins table (see Admin portal below)
+  scan-recipe/          calls the Anthropic API server-side to read a photo of a recipe (see AI recipe scan below)
+  merge-shopping-list/  calls the Anthropic API server-side to decide how to combine ingredients on the shopping list (see AI shopping list merge below)
 ```
 
 ## Authentication setup
@@ -151,6 +153,17 @@ To enable it:
    (`SUPABASE_URL` and `SUPABASE_ANON_KEY` are already available to every Edge Function automatically — no need to set those yourself.)
 
 Until the key is set, a scan attempt fails with a normal "Could not read that recipe" error — it doesn't block the rest of Post a Recipe, since typing everything in by hand always still works.
+
+## AI shopping list merge
+
+Adding a recipe's ingredients to the shopping list (`src/lib/api/shoppingList.ts`) sends the new ingredients and the current list to a Supabase Edge Function (`supabase/functions/merge-shopping-list/`), which asks Claude (`claude-sonnet-5`) — again via a forced tool-use call, `merge_shopping_list` — to decide for each new ingredient whether it matches something already on the list (even worded differently, e.g. "bell pepper" vs "red pepper, diced") and what the combined quantity/unit/display name should be (e.g. "1 pepper" + "2 peppers" → "3 pepper"). The client then applies that plan with normal per-user writes, so RLS on `shopping_list_items` still applies — the function only returns a plan, it never touches the database itself.
+
+If that call fails for any reason (key not set, network error, etc.), it falls back to a local exact-match: same item name and unit combine by numerically summing their quantities (handling plain numbers, simple fractions like `1/2`, and mixed numbers like `1 1/2`), while anything non-numeric is joined as readable text instead of silently dropped.
+
+It uses the same Anthropic API key as the recipe scan above, and Edge Function secrets are shared across every function in a project, so no extra setup is needed if `scan-recipe` is already deployed with `ANTHROPIC_API_KEY` set — just deploy the new function itself:
+```bash
+npx supabase functions deploy merge-shopping-list --project-ref <your-project-ref>
+```
 
 ## Next steps
 
