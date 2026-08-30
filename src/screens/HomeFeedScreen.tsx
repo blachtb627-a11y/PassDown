@@ -82,6 +82,14 @@ export function HomeFeedScreen() {
             <Text style={[typography.wordmark, styles.brandText]}>Passed Down</Text>
           </View>
           <View style={styles.bannerIcons}>
+            <Pressable
+              onPress={() => navigation.navigate('ShoppingList')}
+              accessibilityRole="button"
+              accessibilityLabel="Shopping List"
+              style={styles.cartButton}
+            >
+              <Ionicons name="cart-outline" size={24} color={colors.onHeaderBanner} />
+            </Pressable>
             <Ionicons name="notifications-outline" size={24} color={colors.onHeaderBanner} accessibilityLabel="Notifications" />
           </View>
         </View>
@@ -231,6 +239,7 @@ function createStyles(colors: AppColors) {
     },
     brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     bannerIcons: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    cartButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
     logoMark: { width: 30, height: 30 },
     brandText: { color: colors.onHeaderBanner },
     circleChipsRow: { flexGrow: 0, marginTop: spacing.md },

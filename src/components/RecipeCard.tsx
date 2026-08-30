@@ -19,14 +19,14 @@ type Props = {
   isLiked: boolean;
 };
 
-// Single-letter/short-code badges for the one diet the poster picked — a compact stand-in
-// for the multi-tag dietary badges in the reference design until recipes support more than
-// one diet tag at a time.
-const DIET_BADGE: Record<Exclude<Diet, 'None'>, { code: string; color: string }> = {
-  Vegetarian: { code: 'V', color: '#5C7A4A' },
-  Vegan: { code: 'VG', color: '#3F7D5A' },
-  'Gluten-Free': { code: 'GF', color: '#C4922B' },
-  'Dairy-Free': { code: 'DF', color: '#B5451F' },
+// A colored badge for the one diet the poster picked — a compact stand-in
+// for the multi-tag dietary badges in the reference design until recipes
+// support more than one diet tag at a time.
+const DIET_BADGE: Record<Exclude<Diet, 'None'>, { color: string }> = {
+  Vegetarian: { color: '#5C7A4A' },
+  Vegan: { color: '#3F7D5A' },
+  'Gluten-Free': { color: '#C4922B' },
+  'Dairy-Free': { color: '#B5451F' },
 };
 
 export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onToggleLike, isSaved, isLiked }: Props) {
@@ -86,7 +86,9 @@ export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onT
           <View style={styles.tagsRow}>
             {dietBadge ? (
               <View style={[styles.dietBadge, { backgroundColor: dietBadge.color }]}>
-                <Text style={styles.dietBadgeText}>{dietBadge.code}</Text>
+                <Text style={styles.dietBadgeText} numberOfLines={1}>
+                  {recipe.diet}
+                </Text>
               </View>
             ) : null}
             {tags.map((tag) => (
@@ -240,9 +242,9 @@ function createStyles(colors: AppColors) {
       marginBottom: spacing.xs,
     },
     dietBadge: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
       alignItems: 'center',
       justifyContent: 'center',
     },
