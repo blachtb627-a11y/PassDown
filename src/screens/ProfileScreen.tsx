@@ -46,6 +46,7 @@ export function ProfileScreen() {
     addRecipeToCollection,
     removeRecipeFromCollection,
     followedAuthorIds,
+    followBusyIds,
     toggleFollowAuthor,
     currentUser,
   } = useAppState();
@@ -63,6 +64,7 @@ export function ProfileScreen() {
   const [nameModal, setNameModal] = useState<NameModalState | null>(null);
   const [isSavingName, setIsSavingName] = useState(false);
   const [assignRecipeId, setAssignRecipeId] = useState<string | null>(null);
+  const [assignBusyIds, setAssignBusyIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOwnProfile) return;
@@ -135,6 +137,8 @@ export function ProfileScreen() {
   };
 
   const handleToggleAssign = async (collectionId: string, recipeId: string, isIn: boolean) => {
+    if (assignBusyIds.has(collectionId)) return;
+    setAssignBusyIds((prev) => new Set(prev).add(collectionId));
     try {
       if (isIn) {
         await removeRecipeFromCollection(collectionId, recipeId);
@@ -143,6 +147,12 @@ export function ProfileScreen() {
       }
     } catch (error) {
       notify('Something went wrong', getErrorMessage(error, 'Could not update this collection.'));
+    } finally {
+      setAssignBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(collectionId);
+        return next;
+      });
     }
   };
 
@@ -244,6 +254,7 @@ export function ProfileScreen() {
               <PrimaryButton
                 label={isFollowing ? 'Following' : 'Follow'}
                 variant={isFollowing ? 'outline' : 'primary'}
+                loading={followBusyIds.has(profileAuthor.id)}
                 onPress={() => toggleFollowAuthor(profileAuthor.id)}
               />
             ) : (

@@ -15,7 +15,7 @@ import { Author } from '../types/recipe';
 
 export function SearchScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { currentUser, followedAuthorIds, toggleFollowAuthor } = useAppState();
+  const { currentUser, followedAuthorIds, followBusyIds, toggleFollowAuthor } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [query, setQuery] = useState('');
@@ -84,6 +84,7 @@ export function SearchScreen() {
           <UserResultCard
             user={item}
             isFollowing={followedAuthorIds.includes(item.id)}
+            isFollowBusy={followBusyIds.has(item.id)}
             onToggleFollow={() => toggleFollowAuthor(item.id)}
             onPress={() => navigation.navigate('UserProfile', { userId: item.id })}
           />

@@ -83,6 +83,7 @@ type AppStateContextValue = {
   collections: Collection[];
   shoppingList: ShoppingListItem[];
   followedAuthorIds: string[];
+  followBusyIds: Set<string>;
   isLoaded: boolean;
   currentUser: Author;
   saveRecipe: (input: RecipeFormInput) => Promise<Recipe>;
@@ -117,6 +118,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
   const [followedAuthorIds, setFollowedAuthorIds] = useState<string[]>([]);
+  const [followBusyIds, setFollowBusyIds] = useState<Set<string>>(new Set());
   const [ownProfile, setOwnProfile] = useState<Author | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -224,15 +226,29 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
+    // Guarded against re-entrancy per authorId: without this, two taps before
+    // the first request resolves both read the same stale wasFollowing value,
+    // apply the same optimistic change twice, and fire two API calls in the
+    // same direction — desyncing local state from what's actually in Supabase.
     const toggleFollowAuthor = (authorId: string) => {
+      if (followBusyIds.has(authorId)) return;
       const wasFollowing = followedAuthorIds.includes(authorId);
+      setFollowBusyIds((prev) => new Set(prev).add(authorId));
       setFollowedAuthorIds((prev) => (wasFollowing ? prev.filter((id) => id !== authorId) : [...prev, authorId]));
-      apiToggleFollow(currentUser.id, authorId, wasFollowing).catch((error) => {
-        console.error('Failed to follow/unfollow', error);
-        setFollowedAuthorIds((prev) =>
-          wasFollowing ? [...prev, authorId] : prev.filter((id) => id !== authorId)
-        );
-      });
+      apiToggleFollow(currentUser.id, authorId, wasFollowing)
+        .catch((error) => {
+          console.error('Failed to follow/unfollow', error);
+          setFollowedAuthorIds((prev) =>
+            wasFollowing ? [...prev, authorId] : prev.filter((id) => id !== authorId)
+          );
+        })
+        .finally(() => {
+          setFollowBusyIds((prev) => {
+            const next = new Set(prev);
+            next.delete(authorId);
+            return next;
+          });
+        });
     };
 
     const createCollection = async (name: string) => {
@@ -298,9 +314,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     };
 
     const clearCheckedShoppingListItems = () => {
+      const previous = shoppingList;
       setShoppingList((prev) => prev.filter((item) => !item.checked));
       apiClearCheckedShoppingListItems(currentUser.id).catch((error) => {
         console.error('Failed to clear checked shopping list items', error);
+        setShoppingList(previous);
       });
     };
 
@@ -375,6 +393,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       collections,
       shoppingList,
       followedAuthorIds,
+      followBusyIds,
       isLoaded,
       currentUser,
       saveRecipe,
@@ -403,6 +422,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     collections,
     shoppingList,
     followedAuthorIds,
+    followBusyIds,
     isLoaded,
     currentUser,
     refetch,

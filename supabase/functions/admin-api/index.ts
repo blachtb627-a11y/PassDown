@@ -57,18 +57,18 @@ Deno.serve(async (req: Request) => {
     const action = body.action;
 
     if (action === "list") {
-      const { data: usersPage, error: listError } = await adminClient.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
+      // Independent queries — run together instead of one after another.
+      const [
+        { data: usersPage, error: listError },
+        { data: profiles, error: profilesError },
+        { data: adminRows, error: adminsError },
+      ] = await Promise.all([
+        adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+        adminClient.from("profiles").select("id, full_name, username, created_at"),
+        adminClient.from("admins").select("user_id"),
+      ]);
       if (listError) return json({ error: listError.message }, 500);
-
-      const { data: profiles, error: profilesError } = await adminClient
-        .from("profiles")
-        .select("id, full_name, username, created_at");
       if (profilesError) return json({ error: profilesError.message }, 500);
-
-      const { data: adminRows, error: adminsError } = await adminClient.from("admins").select("user_id");
       if (adminsError) return json({ error: adminsError.message }, 500);
 
       const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));

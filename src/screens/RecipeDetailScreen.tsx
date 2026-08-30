@@ -50,6 +50,7 @@ export function RecipeDetailScreen() {
     savedRecipeIds,
     likedRecipeIds,
     followedAuthorIds,
+    followBusyIds,
     toggleSaveRecipe,
     toggleLikeRecipe,
     toggleFollowAuthor,
@@ -360,6 +361,7 @@ export function RecipeDetailScreen() {
             label={isFollowing ? 'Following' : 'Follow'}
             variant={isFollowing ? 'outline' : 'primary'}
             fullWidth={false}
+            loading={followBusyIds.has(recipe.author.id)}
             onPress={() => toggleFollowAuthor(recipe.author.id)}
           />
         ) : null}

@@ -30,6 +30,16 @@ import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
 import { Author, Recipe } from '../types/recipe';
 
+// The initial fetch and the realtime subscription both start concurrently on
+// mount, so a message that arrives over the socket before the fetch resolves
+// must not be clobbered by it — merge by id (keeping the newer copy) and
+// re-sort instead of overwriting the list outright.
+function mergeMessages(existing: CircleMessage[], incoming: CircleMessage[]): CircleMessage[] {
+  const byId = new Map(existing.map((m) => [m.id, m]));
+  for (const m of incoming) byId.set(m.id, m);
+  return Array.from(byId.values()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
 const headerButtonStyle = {
   minWidth: 44,
   minHeight: 44,
@@ -58,6 +68,7 @@ export function CircleDetailScreen() {
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const messagesListRef = useRef<FlatList>(null);
+  const [shareBusyIds, setShareBusyIds] = useState<Set<string>>(new Set());
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -85,7 +96,7 @@ export function CircleDetailScreen() {
       ]);
       setMembers(memberList);
       setSharedRecipes(recipeList);
-      setMessages(messageList);
+      setMessages((prev) => mergeMessages(prev, messageList));
     } catch (error) {
       notify('Something went wrong', getErrorMessage(error, 'Could not load this circle.'));
     } finally {
@@ -99,10 +110,9 @@ export function CircleDetailScreen() {
   }, [circleId]);
 
   useEffect(() => {
-    const appendIfNew = (message: CircleMessage) => {
-      setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
-    };
-    const unsubscribe = subscribeToCircleMessages(circleId, appendIfNew);
+    const unsubscribe = subscribeToCircleMessages(circleId, (message) => {
+      setMessages((prev) => mergeMessages(prev, [message]));
+    });
     return unsubscribe;
   }, [circleId]);
 
@@ -115,7 +125,7 @@ export function CircleDetailScreen() {
     setMessageText('');
     try {
       const sent = await sendCircleMessage(circleId, currentUser.id, text);
-      setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+      setMessages((prev) => mergeMessages(prev, [sent]));
     } catch (error) {
       notify('Could not send message', getErrorMessage(error, 'Please try again.'));
       setMessageText(text);
@@ -131,6 +141,8 @@ export function CircleDetailScreen() {
     : savedRecipes;
 
   const handleToggleShare = async (recipe: Recipe) => {
+    if (shareBusyIds.has(recipe.id)) return;
+    setShareBusyIds((prev) => new Set(prev).add(recipe.id));
     const isShared = sharedRecipeIds.has(recipe.id);
     setSharedRecipes((prev) => (isShared ? prev.filter((r) => r.id !== recipe.id) : [recipe, ...prev]));
     try {
@@ -142,6 +154,12 @@ export function CircleDetailScreen() {
     } catch (error) {
       setSharedRecipes((prev) => (isShared ? [recipe, ...prev] : prev.filter((r) => r.id !== recipe.id)));
       notify('Something went wrong', getErrorMessage(error, 'Could not update this recipe.'));
+    } finally {
+      setShareBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(recipe.id);
+        return next;
+      });
     }
   };
 

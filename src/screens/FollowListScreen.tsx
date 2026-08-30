@@ -16,7 +16,7 @@ export function FollowListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'FollowList'>>();
   const { userId, mode } = route.params;
-  const { followedAuthorIds, toggleFollowAuthor } = useAppState();
+  const { followedAuthorIds, followBusyIds, toggleFollowAuthor } = useAppState();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -60,6 +60,7 @@ export function FollowListScreen() {
           <UserResultCard
             user={item}
             isFollowing={followedAuthorIds.includes(item.id)}
+            isFollowBusy={followBusyIds.has(item.id)}
             onToggleFollow={() => toggleFollowAuthor(item.id)}
             onPress={() => navigation.navigate('UserProfile', { userId: item.id })}
           />

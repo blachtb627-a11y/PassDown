@@ -9,11 +9,12 @@ import { radius, spacing } from '../theme/typography';
 type Props = {
   user: Author;
   isFollowing: boolean;
+  isFollowBusy?: boolean;
   onToggleFollow: () => void;
   onPress: () => void;
 };
 
-export function UserResultCard({ user, isFollowing, onToggleFollow, onPress }: Props) {
+export function UserResultCard({ user, isFollowing, isFollowBusy, onToggleFollow, onPress }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -40,6 +41,7 @@ export function UserResultCard({ user, isFollowing, onToggleFollow, onPress }: P
           label={isFollowing ? 'Following' : 'Follow'}
           variant={isFollowing ? 'outline' : 'primary'}
           fullWidth={false}
+          loading={isFollowBusy}
           onPress={onToggleFollow}
         />
       </View>
