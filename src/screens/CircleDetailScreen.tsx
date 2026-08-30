@@ -191,9 +191,11 @@ export function CircleDetailScreen() {
                     accessibilityLabel={recipe.title}
                   >
                     <Image source={{ uri: recipe.photos[0] }} style={styles.recipeTilePhoto} />
-                    <Text style={typography.meta} numberOfLines={2}>
-                      {recipe.title}
-                    </Text>
+                    <View style={styles.recipeTileCaption}>
+                      <Text style={[typography.meta, styles.recipeTileTitle]} numberOfLines={2}>
+                        {recipe.title}
+                      </Text>
+                    </View>
                   </Pressable>
                 ))}
               </ScrollView>
@@ -384,8 +386,16 @@ function createStyles(colors: AppColors, typography: AppTypography) {
       marginBottom: spacing.sm,
     },
     recipesRow: { flexGrow: 0, marginBottom: spacing.sm },
-    recipeTile: { width: 110, marginRight: spacing.sm, gap: spacing.xs },
-    recipeTilePhoto: { width: 110, height: 110, borderRadius: radius.md, backgroundColor: colors.border },
+    recipeTile: {
+      width: 110,
+      marginRight: spacing.sm,
+      borderRadius: radius.md,
+      backgroundColor: colors.secondary,
+      overflow: 'hidden',
+    },
+    recipeTilePhoto: { width: 110, height: 110, backgroundColor: colors.border },
+    recipeTileCaption: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, minHeight: 40 },
+    recipeTileTitle: { color: colors.white },
     modalOverlay: {
       flex: 1,
       backgroundColor: colors.overlay,
