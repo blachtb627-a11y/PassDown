@@ -11,3 +11,7 @@ export function getAppBaseUrl(): string {
 export function getRecipeShareUrl(recipeId: string): string {
   return `${getAppBaseUrl()}/recipe/${recipeId}`;
 }
+
+export function getCircleInviteUrl(circleId: string): string {
+  return `${getAppBaseUrl()}/circle/${circleId}/join`;
+}

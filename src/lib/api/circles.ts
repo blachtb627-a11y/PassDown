@@ -100,3 +100,12 @@ export async function removeCircleMember(circleId: string, userId: string): Prom
   const { error } = await supabase.from('circle_members').delete().eq('circle_id', circleId).eq('user_id', userId);
   if (error) throw error;
 }
+
+// Self-join via an invite link, rather than being added by the owner.
+// Opening the same link twice (or already being a member) is a no-op, not
+// an error — a duplicate insert just hits the composite primary key
+// (circle_id, user_id) and reports a unique-violation (Postgres code 23505).
+export async function joinCircle(circleId: string, userId: string): Promise<void> {
+  const { error } = await supabase.from('circle_members').insert({ circle_id: circleId, user_id: userId, added_by: userId });
+  if (error && error.code !== '23505') throw error;
+}

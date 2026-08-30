@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Platform, SafeAreaView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
@@ -9,6 +9,7 @@ import { searchUsers } from '../lib/api/social';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { EmptyState } from '../components/EmptyState';
 import { confirm, getErrorMessage, notify } from '../lib/alert';
+import { getCircleInviteUrl } from '../lib/shareLink';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { AppTypography, radius, spacing } from '../theme/typography';
@@ -23,6 +24,7 @@ export function CircleMembersScreen() {
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
   const [isOwner, setIsOwner] = useState(false);
+  const [circleName, setCircleName] = useState('this circle');
   const [members, setMembers] = useState<Author[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export function CircleMembersScreen() {
     try {
       const [circle, memberList] = await Promise.all([fetchCircle(circleId), fetchCircleMembers(circleId)]);
       setIsOwner(circle?.createdBy === currentUser.id);
+      if (circle?.name) setCircleName(circle.name);
       setMembers(memberList);
     } catch (error) {
       notify('Something went wrong', getErrorMessage(error, 'Could not load members.'));
@@ -96,6 +99,12 @@ export function CircleMembersScreen() {
     }
   };
 
+  const handleShareInvite = () => {
+    const url = getCircleInviteUrl(circleId);
+    const message = `Join "${circleName}" on PassDown!`;
+    Share.share(Platform.OS === 'ios' ? { message, url } : { message: `${message}\n${url}` });
+  };
+
   const handleLeaveOrDelete = async () => {
     const ok = await confirm({
       title: isOwner ? 'Delete this circle?' : 'Leave this circle?',
@@ -132,9 +141,14 @@ export function CircleMembersScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
-          <Text style={[typography.subtitle, styles.sectionTitle]}>
-            {members.length} member{members.length === 1 ? '' : 's'}
-          </Text>
+          <>
+            <Text style={[typography.subtitle, styles.sectionTitle]}>
+              {members.length} member{members.length === 1 ? '' : 's'}
+            </Text>
+            <View style={styles.inviteButtonWrapper}>
+              <PrimaryButton label="Invite via Link" icon="link-outline" variant="outline" onPress={handleShareInvite} />
+            </View>
+          </>
         }
         renderItem={({ item }) => (
           <View style={styles.memberRow}>
@@ -214,6 +228,7 @@ function createStyles(colors: AppColors, typography: AppTypography) {
     loading: { marginTop: spacing.xl },
     listContent: { padding: spacing.md },
     sectionTitle: { marginBottom: spacing.sm },
+    inviteButtonWrapper: { marginBottom: spacing.md },
     memberRow: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -2,52 +2,75 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useAppState } from '../context/AppStateContext';
+import { fetchCircle, joinCircle } from '../lib/api/circles';
+import { getErrorMessage, notify } from '../lib/alert';
 import { navigationRef } from './navigationRef';
 
-function parseRecipeIdFromUrl(url: string | null): string | null {
+type PendingDeepLink = { type: 'recipe'; recipeId: string } | { type: 'circleJoin'; circleId: string };
+
+function parsePendingDeepLink(url: string | null): PendingDeepLink | null {
   if (!url) return null;
   try {
     const { pathname } = new URL(url);
-    const match = pathname.match(/^\/recipe\/([^/]+)\/?$/);
-    return match ? decodeURIComponent(match[1]) : null;
+    const recipeMatch = pathname.match(/^\/recipe\/([^/]+)\/?$/);
+    if (recipeMatch) return { type: 'recipe', recipeId: decodeURIComponent(recipeMatch[1]) };
+    const circleJoinMatch = pathname.match(/^\/circle\/([^/]+)\/join\/?$/);
+    if (circleJoinMatch) return { type: 'circleJoin', circleId: decodeURIComponent(circleJoinMatch[1]) };
+    return null;
   } catch {
     return null;
   }
 }
 
-// A shared recipe link (e.g. "https://passdown.it.com/recipe/<id>") should
-// drop whoever opens it straight onto that recipe — including someone who
-// isn't signed in yet, who needs to log in/sign up first. This reads the
-// recipe id out of the URL the app was opened with once at startup, then
-// waits for both a session and the recipe data to be loaded before
-// navigating, retrying briefly since the navigator may not be mounted yet
-// right after signing in.
+// A shared link — a recipe ("https://passdown.it.com/recipe/<id>") or a
+// circle invite ("https://passdown.it.com/circle/<id>/join") — should take
+// whoever opens it straight to that content, including someone who isn't
+// signed in yet, who needs to log in/sign up first. This reads the link's
+// target out of the URL the app was opened with once at startup, then waits
+// for both a session and the app's own data to be loaded before acting on
+// it, retrying briefly since the navigator may not be mounted yet right
+// after signing in.
 export function DeepLinkHandler() {
   const { session } = useAuth();
-  const { isLoaded } = useAppState();
-  const [pendingRecipeId, setPendingRecipeId] = useState<string | null>(null);
-  const hasNavigated = useRef(false);
+  const { isLoaded, currentUser } = useAppState();
+  const [pending, setPending] = useState<PendingDeepLink | null>(null);
+  const hasHandled = useRef(false);
 
   useEffect(() => {
-    Linking.getInitialURL().then((url) => setPendingRecipeId(parseRecipeIdFromUrl(url)));
+    Linking.getInitialURL().then((url) => setPending(parsePendingDeepLink(url)));
   }, []);
 
   useEffect(() => {
-    if (!pendingRecipeId || hasNavigated.current || !session || !isLoaded) return;
+    if (!pending || hasHandled.current || !session || !isLoaded) return;
 
-    const tryNavigate = () => {
-      if (!navigationRef.isReady()) return false;
-      navigationRef.navigate('RecipeDetail', { recipeId: pendingRecipeId });
-      hasNavigated.current = true;
+    const handle = async () => {
+      if (pending.type === 'recipe') {
+        navigationRef.navigate('RecipeDetail', { recipeId: pending.recipeId });
+        return;
+      }
+      try {
+        await joinCircle(pending.circleId, currentUser.id);
+      } catch (error) {
+        notify('Could not join that circle', getErrorMessage(error, 'The invite link may no longer be valid.'));
+        return;
+      }
+      const circle = await fetchCircle(pending.circleId).catch(() => null);
+      navigationRef.navigate('CircleDetail', { circleId: pending.circleId, name: circle?.name ?? 'Circle' });
+    };
+
+    const tryRun = () => {
+      if (!navigationRef.isReady() || hasHandled.current) return false;
+      hasHandled.current = true;
+      handle();
       return true;
     };
 
-    if (tryNavigate()) return;
+    if (tryRun()) return;
     const interval = setInterval(() => {
-      if (tryNavigate()) clearInterval(interval);
+      if (tryRun()) clearInterval(interval);
     }, 100);
     return () => clearInterval(interval);
-  }, [pendingRecipeId, session, isLoaded]);
+  }, [pending, session, isLoaded, currentUser.id]);
 
   return null;
 }
