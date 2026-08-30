@@ -6,22 +6,14 @@ import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme/typography';
 
-export type FollowStatus = 'none' | 'pending' | 'accepted';
-
 type Props = {
   user: Author;
-  followStatus: FollowStatus;
+  isFollowing: boolean;
   onToggleFollow: () => void;
   onPress: () => void;
 };
 
-const FOLLOW_BUTTON_LABEL: Record<FollowStatus, string> = {
-  none: 'Follow',
-  pending: 'Requested',
-  accepted: 'Following',
-};
-
-export function UserResultCard({ user, followStatus, onToggleFollow, onPress }: Props) {
+export function UserResultCard({ user, isFollowing, onToggleFollow, onPress }: Props) {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -45,8 +37,8 @@ export function UserResultCard({ user, followStatus, onToggleFollow, onPress }: 
       </View>
       <View style={styles.followButton}>
         <PrimaryButton
-          label={FOLLOW_BUTTON_LABEL[followStatus]}
-          variant={followStatus === 'none' ? 'primary' : 'outline'}
+          label={isFollowing ? 'Following' : 'Follow'}
+          variant={isFollowing ? 'outline' : 'primary'}
           fullWidth={false}
           onPress={onToggleFollow}
         />

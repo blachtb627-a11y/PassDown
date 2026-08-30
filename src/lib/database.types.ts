@@ -258,19 +258,16 @@ export type Database = {
           created_at: string
           followee_id: string
           follower_id: string
-          status: string
         }
         Insert: {
           created_at?: string
           followee_id: string
           follower_id: string
-          status?: string
         }
         Update: {
           created_at?: string
           followee_id?: string
           follower_id?: string
-          status?: string
         }
         Relationships: [
           {

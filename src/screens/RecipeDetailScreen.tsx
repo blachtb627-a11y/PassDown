@@ -50,7 +50,6 @@ export function RecipeDetailScreen() {
     savedRecipeIds,
     likedRecipeIds,
     followedAuthorIds,
-    pendingOutgoingFollowIds,
     toggleSaveRecipe,
     toggleLikeRecipe,
     toggleFollowAuthor,
@@ -132,7 +131,6 @@ export function RecipeDetailScreen() {
   const isSaved = savedRecipeIds.includes(recipe.id);
   const isLiked = likedRecipeIds.includes(recipe.id);
   const isFollowing = followedAuthorIds.includes(recipe.author.id);
-  const isFollowPending = pendingOutgoingFollowIds.includes(recipe.author.id);
   const isOwnRecipe = recipe.author.id === currentUser.id;
   const totalTime = (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
 
@@ -359,8 +357,8 @@ export function RecipeDetailScreen() {
         </View>
         {!isOwnRecipe ? (
           <PrimaryButton
-            label={isFollowing ? 'Following' : isFollowPending ? 'Requested' : 'Follow'}
-            variant={isFollowing || isFollowPending ? 'outline' : 'primary'}
+            label={isFollowing ? 'Following' : 'Follow'}
+            variant={isFollowing ? 'outline' : 'primary'}
             fullWidth={false}
             onPress={() => toggleFollowAuthor(recipe.author.id)}
           />
