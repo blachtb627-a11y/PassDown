@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,7 +8,6 @@ import { DropdownButton } from '../components/DropdownButton';
 import { SelectModal } from '../components/SelectModal';
 import { EmptyState } from '../components/EmptyState';
 import { useAppState } from '../context/AppStateContext';
-import { CircleSummary, fetchCircleMembers, fetchMyCircles } from '../lib/api/circles';
 import { countries } from '../data/countries';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -22,8 +21,7 @@ type FeedTab = 'public' | 'following';
 
 export function HomeFeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { recipes, savedRecipeIds, likedRecipeIds, followedAuthorIds, currentUser, toggleSaveRecipe, toggleLikeRecipe } =
-    useAppState();
+  const { recipes, savedRecipeIds, likedRecipeIds, followedAuthorIds, toggleSaveRecipe, toggleLikeRecipe } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [feedTab, setFeedTab] = useState<FeedTab>('public');
@@ -33,37 +31,12 @@ export function HomeFeedScreen() {
   const [isCuisineModalOpen, setIsCuisineModalOpen] = useState(false);
   const [isMealTypeModalOpen, setIsMealTypeModalOpen] = useState(false);
 
-  const [circles, setCircles] = useState<CircleSummary[]>([]);
-  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
-  const [circleMemberIds, setCircleMemberIds] = useState<Record<string, Set<string>>>({});
-
-  useEffect(() => {
-    // Circles is a separate, best-effort feature here — if it fails to load, the feed
-    // itself should still work fine with no filter chips shown.
-    fetchMyCircles(currentUser.id)
-      .then(setCircles)
-      .catch(() => setCircles([]));
-  }, [currentUser.id]);
-
-  const handleSelectCircle = (circleId: string) => {
-    setSelectedCircleId((prev) => (prev === circleId ? null : circleId));
-    if (!circleMemberIds[circleId]) {
-      fetchCircleMembers(circleId)
-        .then((members) => {
-          setCircleMemberIds((prev) => ({ ...prev, [circleId]: new Set(members.map((m) => m.id)) }));
-        })
-        .catch(() => {});
-    }
-  };
-
   const publishedRecipes = useMemo(() => recipes.filter((r) => !r.isDraft), [recipes]);
 
   const visibleRecipes = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const memberIds = selectedCircleId ? circleMemberIds[selectedCircleId] : null;
     return publishedRecipes.filter((r) => {
       if (feedTab === 'following' && !followedAuthorIds.includes(r.author.id)) return false;
-      if (memberIds && !memberIds.has(r.author.id)) return false;
       if (selectedCuisine && r.cuisine !== selectedCuisine) return false;
       if (selectedMealType && r.mealType !== selectedMealType) return false;
       if (!q) return true;
@@ -72,7 +45,7 @@ export function HomeFeedScreen() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [publishedRecipes, query, selectedCuisine, selectedMealType, selectedCircleId, circleMemberIds, feedTab, followedAuthorIds]);
+  }, [publishedRecipes, query, selectedCuisine, selectedMealType, feedTab, followedAuthorIds]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -94,28 +67,6 @@ export function HomeFeedScreen() {
             <Ionicons name="notifications-outline" size={24} color={colors.onHeaderBanner} accessibilityLabel="Notifications" />
           </View>
         </View>
-
-        {circles.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.circleChipsRow}>
-            {circles.map((circle) => {
-              const selected = selectedCircleId === circle.id;
-              return (
-                <Pressable
-                  key={circle.id}
-                  onPress={() => handleSelectCircle(circle.id)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={circle.name}
-                  style={[styles.circleChip, selected && styles.circleChipSelected]}
-                >
-                  <Text style={[typography.bodyBold, styles.circleChipText, selected && styles.circleChipTextSelected]} numberOfLines={1}>
-                    {circle.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        ) : null}
 
         <View style={styles.searchBarWrapper}>
           <Ionicons name="search" size={20} color={colors.textMuted} />
@@ -243,19 +194,6 @@ function createStyles(colors: AppColors) {
     cartButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
     logoMark: { width: 30, height: 30 },
     brandText: { color: colors.onHeaderBanner },
-    circleChipsRow: { flexGrow: 0, marginTop: spacing.md },
-    circleChip: {
-      paddingHorizontal: spacing.md,
-      minHeight: 40,
-      justifyContent: 'center',
-      borderRadius: radius.pill,
-      borderWidth: 1.5,
-      borderColor: colors.onHeaderBanner,
-      marginRight: spacing.sm,
-    },
-    circleChipSelected: { backgroundColor: colors.onHeaderBanner },
-    circleChipText: { color: colors.onHeaderBanner },
-    circleChipTextSelected: { color: colors.headerBanner },
     searchBarWrapper: {
       flexDirection: 'row',
       alignItems: 'center',
