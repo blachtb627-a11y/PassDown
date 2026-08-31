@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Image, Linking, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { Ad } from '../lib/api/ads';
+import { Ad, recordAdClick } from '../lib/api/ads';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme/typography';
@@ -47,7 +47,10 @@ export function AdCard({ ad }: Props) {
 
   return (
     <Pressable
-      onPress={() => Linking.openURL(ad.linkUrl!)}
+      onPress={() => {
+        Linking.openURL(ad.linkUrl!);
+        recordAdClick(ad.id).catch(() => {});
+      }}
       accessibilityRole="button"
       accessibilityLabel={`${ad.companyName} advertisement`}
     >

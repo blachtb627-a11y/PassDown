@@ -39,6 +39,7 @@ export type Database = {
       }
       ads: {
         Row: {
+          click_count: number
           company_name: string
           created_at: string
           created_by: string
@@ -53,6 +54,7 @@ export type Database = {
           view_count: number
         }
         Insert: {
+          click_count?: number
           company_name: string
           created_at?: string
           created_by?: string
@@ -67,6 +69,7 @@ export type Database = {
           view_count?: number
         }
         Update: {
+          click_count?: number
           company_name?: string
           created_at?: string
           created_by?: string
@@ -636,6 +639,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      record_ad_click: {
+        Args: { ad_id: string }
+        Returns: undefined
+      }
       record_ad_view: {
         Args: { ad_id: string }
         Returns: undefined

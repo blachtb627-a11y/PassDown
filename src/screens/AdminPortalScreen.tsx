@@ -205,6 +205,20 @@ function ManageAccountsTab() {
 
 type PickedMedia = { uri: string; type: AdMediaType };
 
+function getAdStatus(ad: Ad, now: number) {
+  const isExpired = ad.endsAt ? new Date(ad.endsAt).getTime() <= now : false;
+  const daysLeft = ad.endsAt ? Math.max(0, Math.ceil((new Date(ad.endsAt).getTime() - now) / 86400000)) : null;
+  const isCapped = ad.targetViewCount !== undefined && ad.viewCount >= ad.targetViewCount;
+  const isRunning = ad.isActive && !isExpired && !isCapped;
+  const label = isRunning ? 'Running' : !ad.isActive ? 'Paused' : 'Ended';
+  return { isRunning, daysLeft, label };
+}
+
+function formatCtr(clicks: number, views: number): string | null {
+  if (views === 0) return null;
+  return `${((clicks / views) * 100).toFixed(1)}%`;
+}
+
 function AdDeploymentTab() {
   const { currentUser } = useAppState();
   const { colors, typography } = useTheme();
@@ -329,6 +343,14 @@ function AdDeploymentTab() {
     }
   };
 
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const totalViews = ads.reduce((sum, a) => sum + a.viewCount, 0);
+    const totalClicks = ads.reduce((sum, a) => sum + a.clickCount, 0);
+    const runningCount = ads.filter((a) => getAdStatus(a, now).isRunning).length;
+    return { totalViews, totalClicks, runningCount, ctr: formatCtr(totalClicks, totalViews) };
+  }, [ads]);
+
   return (
     <FlatList
       data={ads}
@@ -336,7 +358,27 @@ function AdDeploymentTab() {
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
       contentContainerStyle={styles.listContent}
       ListHeaderComponent={
-        <View style={styles.formCard}>
+        <>
+          <View style={styles.statsCard}>
+            <View style={styles.statItem}>
+              <Text style={typography.display}>{ads.length}</Text>
+              <Text style={typography.meta}>Total ads</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={typography.display}>{stats.runningCount}</Text>
+              <Text style={typography.meta}>Running now</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={typography.display}>{stats.totalViews}</Text>
+              <Text style={typography.meta}>Total views</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={typography.display}>{stats.totalClicks}</Text>
+              <Text style={typography.meta}>Total clicks{stats.ctr ? ` (${stats.ctr})` : ''}</Text>
+            </View>
+          </View>
+
+          <View style={styles.formCard}>
           <Text style={[typography.subtitle, styles.formTitle]}>New Ad</Text>
           <TextInput
             style={styles.input}
@@ -403,15 +445,13 @@ function AdDeploymentTab() {
             {ads.length} ad{ads.length === 1 ? '' : 's'}
           </Text>
         </View>
+        </>
       }
       ListEmptyComponent={!isLoading ? <EmptyState icon="megaphone-outline" message="No ads yet — create one above." /> : null}
       renderItem={({ item }) => {
         const now = Date.now();
-        const isExpired = item.endsAt ? new Date(item.endsAt).getTime() <= now : false;
-        const daysLeft = item.endsAt ? Math.max(0, Math.ceil((new Date(item.endsAt).getTime() - now) / 86400000)) : null;
-        const isCapped = item.targetViewCount !== undefined && item.viewCount >= item.targetViewCount;
-        const isRunning = item.isActive && !isExpired && !isCapped;
-        const statusLabel = isRunning ? 'Running' : !item.isActive ? 'Paused' : 'Ended';
+        const { isRunning, daysLeft, label: statusLabel } = getAdStatus(item, now);
+        const ctr = formatCtr(item.clickCount, item.viewCount);
 
         return (
           <View style={styles.card}>
@@ -428,6 +468,10 @@ function AdDeploymentTab() {
               {item.viewCount} view{item.viewCount === 1 ? '' : 's'}
               {item.targetViewCount ? ` of ${item.targetViewCount}` : ''}
               {daysLeft !== null ? ` · ${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : ''}
+            </Text>
+            <Text style={typography.meta}>
+              {item.clickCount} click{item.clickCount === 1 ? '' : 's'}
+              {ctr ? ` (${ctr} CTR)` : ''}
             </Text>
             <PrimaryButton
               label={item.isActive ? 'Pause' : 'Resume'}
@@ -496,6 +540,17 @@ function createStyles(colors: AppColors, typography?: AppTypography) {
     padding: spacing.md,
     marginBottom: spacing.md,
   },
+  statsCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  statItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
   formTitle: { marginBottom: spacing.sm },
   formRow: { flexDirection: 'row', gap: spacing.sm },
   formRowItem: { flex: 1 },

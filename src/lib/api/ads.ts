@@ -13,6 +13,7 @@ export type Ad = {
   linkUrl?: string;
   targetViewCount?: number;
   viewCount: number;
+  clickCount: number;
   startsAt: string;
   endsAt?: string;
   isActive: boolean;
@@ -28,6 +29,7 @@ function mapAd(row: Tables<'ads'>): Ad {
     linkUrl: row.link_url ?? undefined,
     targetViewCount: row.target_view_count ?? undefined,
     viewCount: row.view_count,
+    clickCount: row.click_count,
     startsAt: row.starts_at,
     endsAt: row.ends_at ?? undefined,
     isActive: row.is_active,
@@ -52,6 +54,12 @@ export async function fetchActiveAd(): Promise<Ad | null> {
 // record_ad_view() in ..._add_ads.sql), never an arbitrary update.
 export async function recordAdView(adId: string): Promise<void> {
   const { error } = await supabase.rpc('record_ad_view', { ad_id: adId });
+  if (error) throw error;
+}
+
+// Same reasoning as recordAdView, for taps instead of impressions.
+export async function recordAdClick(adId: string): Promise<void> {
+  const { error } = await supabase.rpc('record_ad_click', { ad_id: adId });
   if (error) throw error;
 }
 
