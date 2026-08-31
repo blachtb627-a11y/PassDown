@@ -37,6 +37,59 @@ export type Database = {
           },
         ]
       }
+      ads: {
+        Row: {
+          company_name: string
+          created_at: string
+          created_by: string
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          link_url: string | null
+          media_type: string
+          media_url: string
+          starts_at: string
+          target_view_count: number | null
+          view_count: number
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          created_by?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_url?: string | null
+          media_type: string
+          media_url: string
+          starts_at?: string
+          target_view_count?: number | null
+          view_count?: number
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          created_by?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_url?: string | null
+          media_type?: string
+          media_url?: string
+          starts_at?: string
+          target_view_count?: number | null
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       circle_members: {
         Row: {
           added_by: string
@@ -583,7 +636,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      record_ad_view: {
+        Args: { ad_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

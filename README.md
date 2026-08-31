@@ -21,6 +21,7 @@ This is the **MVP** — every screen from the brief's MVP scope is built and nav
 | AI recipe scan | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Reads a photo of a handwritten/printed recipe and returns structured title/ingredients/steps via forced tool-use (reliable JSON, no prompt-parsing). Runs server-side since the Anthropic API key can never ship in the app bundle — same reasoning as the admin portal below. |
 | AI shopping list merge | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Decides, for each ingredient being added, whether it's the same grocery item as something already on the list even if worded differently (e.g. "bell pepper" vs "red pepper, diced") and what the combined quantity should be — same forced tool-use approach and same reason it's server-side, see below. |
 | AI recipe translation | Claude (`claude-sonnet-5`), called from a Supabase Edge Function | Translates a recipe's title/story/ingredients/steps to English and converts metric units to US customary ones, on demand from a button on Recipe Detail — same forced tool-use approach and same reason it's server-side, see below. |
+| Video ads | `expo-video` | Plays a video ad on the Home feed the same way an image ad shows — see Ad system below. |
 
 ## What's implemented (MVP, brief section 4)
 
@@ -130,7 +131,7 @@ Applied to the Supabase project via migrations. The initial schema was applied d
 - `profiles` — one row per account, auto-created (with two starter collections) by a trigger on signup. `username` is required and unique (case-insensitive); `full_name` is a separate, non-unique display name.
 - `recipes` — ingredients/steps stored as JSONB (matches the app's nested shape exactly); `like_count`/`comment_count` kept in sync by triggers. `is_private` controls visibility: public recipes are visible to everyone, private ones only to the author and their followers — enforced by the table's row-level security policy itself (`supabase/migrations/..._add_recipe_privacy_and_delete.sql`), not by client-side filtering, so a private recipe is never even returned by the API to someone who isn't allowed to see it. The same migration lets an author delete their own recipe (cascading to its comments/likes/saves/etc.).
 - `comments`, `made_this_posts`, `likes`, `saves`, `follows`, `collections`, `collection_recipes`, `shopping_list_items`.
-- `circles` / `circle_members` — a circle's own row (id/name/creator) is visible to any signed-in user (needed to resolve an invite link before joining, see Circle invite links below); its members, shared recipes, and chat stay member-only. The creator can delete the circle; anyone can add themselves (via an invite link) or be added by the creator (by search), and can remove themselves (`supabase/migrations/..._add_circles.sql`, `..._add_circle_invite_links.sql`).
+- `circles` / `circle_members` — a circle (and its members, shared recipes, chat) is only visible to its own members. The creator can delete the circle; anyone can add themselves (via an invite link, see Circle invite links below) or be added by the creator (by search), and can remove themselves (`supabase/migrations/..._add_circles.sql`, `..._add_circle_invite_links.sql`, `..._fix_circles_select_leak.sql`).
 - `circle_recipes` — join table sharing a recipe into a circle; any member can add one, the adder or the circle's owner can remove it. A recipe shared into a circle gets an *additional* permissive SELECT policy on `recipes` granting visibility to that circle's members, layered on top of (not replacing) the recipe's own public/private/followers rule.
 - `circle_messages` — a circle's group chat; any member can post, any member can read the full history (`supabase/migrations/..._add_circle_messages.sql`, see Circle group chat below).
 
@@ -141,7 +142,7 @@ Every table has row-level security: published recipes and social data (comments,
 A hidden "Admin Portal" entry appears in Settings for admin accounts only, with two tabs:
 
 - **Manage Accounts** — lists every signed-up account (email, name, username, join date, last active, email-verified status), and can delete an account, make another account an admin, or remove admin access from one.
-- **Ad Deployment** — a placeholder for now. Ad serving needs real decisions first (an ad network, placement, targeting) — the tab exists so the portal's shape is ready, but there's nothing to configure yet.
+- **Ad Deployment** — create and manage ads that run on the Home feed. See Ad system below.
 
 There's no separate admin login — admin-ness is a permission on a normal account, not a different auth system. That's deliberate: a second parallel login for the same accounts would be more attack surface to secure without adding real protection.
 
@@ -207,7 +208,22 @@ An **Invite via Link** button on the Members screen (`getCircleInviteUrl()` in `
 - If not, they sign up/log in first, then get added and land on the circle right after — same pattern as a shared recipe link (see Sharing a recipe above), handled by the same `DeepLinkHandler`.
 - Opening it again (or already being a member) is a no-op, not an error.
 
-The circle's own UUID *is* the invite secret — knowing the link is what grants access, the same way a Google Doc or Slack invite link works, rather than a separate one-time invite code. That only works because `supabase/migrations/20260830240000_add_circle_invite_links.sql` changes two things: any signed-in user can now look up a circle's own name (needed to resolve and show what a link points at before joining — membership, shared recipes, and chat all keep their existing member-only policies, unaffected), and a new policy lets a user add *themselves* to a circle's membership, alongside the existing "owner adds anyone by search" policy. Apply it the same way as any other migration: Supabase Dashboard → **SQL Editor** → **New query** → paste the file's contents → **Run**.
+The circle's own UUID *is* the invite secret — knowing the link is what grants access, the same way a Google Doc or Slack invite link works, rather than a separate one-time invite code. `supabase/migrations/20260830240000_add_circle_invite_links.sql` adds the policy that makes this possible: a user can add *themselves* to a circle's membership, alongside the existing "owner adds anyone by search" policy. Apply it the same way as any other migration: Supabase Dashboard → **SQL Editor** → **New query** → paste the file's contents → **Run**.
+
+That migration originally *also* widened circles' own SELECT policy to let any signed-in user look up any circle's name, reasoning (wrongly) that resolving a link needed it before the visitor had joined. It didn't: `DeepLinkHandler` inserts the join first and only fetches the circle's name after, by which point the visitor already is a member — so the original member-only SELECT policy covers it. That widened policy made every "my circles" list in the app (Circles tab, the Share-to-Circle picker) briefly show every circle from every account instead of just the caller's own, since those all rely on RLS to scope "my circles" rather than filtering explicitly. `supabase/migrations/20260831180000_fix_circles_select_leak.sql` restores the member-only policy — apply it too, the same way, and apply it *after* the invite-links migration above.
+
+## Ad system
+
+The Admin Portal's **Ad Deployment** tab is where an admin creates and manages ads:
+
+- Pick a photo or video from the device's library, give it a company name and an optional link (opens when tapped), set how many days it should run, and optionally cap it at a number of Home-feed views.
+- Every ad the admin has ever created is listed below the form, each showing **Running** / **Paused** / **Ended** and its current view count and days remaining, with a **Pause**/**Resume** toggle and a **Delete** button.
+
+On the Home feed, one currently-running ad (if any) shows as a card right under the Cuisine/Meal Type filters — a photo or an autoplaying muted looping video (`expo-video`), labeled "Sponsored," tapping through to its link if it has one. One ad is picked (at random among everything currently eligible, so several running ads share views roughly evenly) each time the feed loads, and that counts as one view toward its cap. An ad stops showing on its own once it's paused, past its end date, or (if it has one) past its view cap — no code change needed, that's enforced by the `ads` table's own row-level security, the same way a private recipe is invisible to someone who isn't allowed to see it.
+
+Recording a view needed its own narrow door: a regular user has no general permission to update the `ads` table (only an admin does), so `record_ad_view()` is a database function that can only ever add exactly 1 to one specific ad's view count — nothing else about the table is exposed to it, unlike a broad "any signed-in user can update ads" policy would allow.
+
+`supabase/migrations/20260831190000_add_ads.sql` creates the `ads` table and its RLS (admins can do everything; everyone else can only see an ad that's currently eligible to run), the `record_ad_view()` function, and a new `ad-media` Storage bucket (public read since ads need to be visible to everyone; admin-only upload/delete). Apply it the same way as any other migration: Supabase Dashboard → **SQL Editor** → **New query** → paste the file's contents → **Run**. No Edge Function or extra secret is involved.
 
 ## Next steps
 

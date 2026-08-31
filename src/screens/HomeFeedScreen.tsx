@@ -1,13 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RecipeCard } from '../components/RecipeCard';
+import { AdCard } from '../components/AdCard';
 import { DropdownButton } from '../components/DropdownButton';
 import { SelectModal } from '../components/SelectModal';
 import { EmptyState } from '../components/EmptyState';
 import { useAppState } from '../context/AppStateContext';
+import { Ad, fetchActiveAd, recordAdView } from '../lib/api/ads';
 import { countries } from '../data/countries';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -30,6 +32,24 @@ export function HomeFeedScreen() {
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
   const [isCuisineModalOpen, setIsCuisineModalOpen] = useState(false);
   const [isMealTypeModalOpen, setIsMealTypeModalOpen] = useState(false);
+  const [ad, setAd] = useState<Ad | null>(null);
+
+  useEffect(() => {
+    // Ads are a separate, best-effort feature here — if none is running, or
+    // the fetch fails, the feed itself should still work fine with no ad
+    // shown. One ad is picked per feed load, and counts as one view then.
+    let cancelled = false;
+    fetchActiveAd()
+      .then((result) => {
+        if (cancelled || !result) return;
+        setAd(result);
+        recordAdView(result.id).catch(() => {});
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const publishedRecipes = useMemo(() => recipes.filter((r) => !r.isDraft), [recipes]);
 
@@ -119,6 +139,7 @@ export function HomeFeedScreen() {
                 <DropdownButton label="Cuisine" value={selectedCuisine} onPress={() => setIsCuisineModalOpen(true)} />
                 <DropdownButton label="Meal Type" value={selectedMealType} onPress={() => setIsMealTypeModalOpen(true)} />
               </View>
+              {ad ? <AdCard ad={ad} /> : null}
             </>
           }
           ListEmptyComponent={
