@@ -22,7 +22,8 @@ type FeedTab = 'public' | 'following';
 
 export function HomeFeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { recipes, savedRecipeIds, likedRecipeIds, followedAuthorIds, toggleSaveRecipe, toggleLikeRecipe } = useAppState();
+  const { recipes, savedRecipeIds, likedRecipeIds, followedAuthorIds, currentUser, toggleSaveRecipe, toggleLikeRecipe } =
+    useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [feedTab, setFeedTab] = useState<FeedTab>('public');
@@ -39,10 +40,10 @@ export function HomeFeedScreen() {
   useEffect(() => {
     // Circles is a separate, best-effort feature here — if it fails to load, the feed
     // itself should still work fine with no filter chips shown.
-    fetchMyCircles()
+    fetchMyCircles(currentUser.id)
       .then(setCircles)
       .catch(() => setCircles([]));
-  }, []);
+  }, [currentUser.id]);
 
   const handleSelectCircle = (circleId: string) => {
     setSelectedCircleId((prev) => (prev === circleId ? null : circleId));

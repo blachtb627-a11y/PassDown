@@ -26,7 +26,7 @@ export function CirclesScreen() {
 
   const load = useCallback(async () => {
     try {
-      const result = await fetchMyCircles();
+      const result = await fetchMyCircles(currentUser.id);
       setCircles(result);
     } catch (error) {
       notify('Something went wrong', getErrorMessage(error, 'Could not load your circles.'));

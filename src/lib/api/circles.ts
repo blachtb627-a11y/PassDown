@@ -13,10 +13,25 @@ export type CircleSummary = {
 
 type MemberProfileRow = Pick<Tables<'profiles'>, 'id' | 'full_name' | 'username' | 'avatar_url' | 'bio'>;
 
-export async function fetchMyCircles(): Promise<CircleSummary[]> {
+// Takes userId and filters explicitly, rather than leaving the scoping
+// entirely to RLS — a past RLS regression on circles' SELECT policy briefly
+// made this function (and everywhere it's used: the Circles tab, Home's
+// circle chips, the Share-to-Circle picker) return every circle from every
+// account instead of just the caller's own. This is a second, independent
+// layer of protection against that happening silently again.
+export async function fetchMyCircles(userId: string): Promise<CircleSummary[]> {
+  const { data: myMemberships, error: myMembershipError } = await supabase
+    .from('circle_members')
+    .select('circle_id')
+    .eq('user_id', userId);
+  if (myMembershipError) throw myMembershipError;
+  const circleIds = myMemberships.map((m) => m.circle_id);
+  if (circleIds.length === 0) return [];
+
   const { data: circles, error } = await supabase
     .from('circles')
     .select('id, name, created_by')
+    .in('id', circleIds)
     .order('created_at', { ascending: false });
   if (error) throw error;
   if (circles.length === 0) return [];
@@ -24,10 +39,7 @@ export async function fetchMyCircles(): Promise<CircleSummary[]> {
   const { data: memberRows, error: memberError } = await supabase
     .from('circle_members')
     .select('circle_id')
-    .in(
-      'circle_id',
-      circles.map((c) => c.id)
-    );
+    .in('circle_id', circleIds);
   if (memberError) throw memberError;
 
   const counts = new Map<string, number>();

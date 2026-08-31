@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CircleSummary, fetchMyCircles } from '../lib/api/circles';
 import { fetchCirclesSharingRecipe, removeRecipeFromCircle, shareRecipeToCircle } from '../lib/api/circleRecipes';
+import { useAppState } from '../context/AppStateContext';
 import { getErrorMessage, notify } from '../lib/alert';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function ShareToCircleModal({ recipeId, visible, onClose }: Props) {
+  const { currentUser } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
@@ -26,14 +28,14 @@ export function ShareToCircleModal({ recipeId, visible, onClose }: Props) {
   useEffect(() => {
     if (!visible) return;
     setIsLoading(true);
-    Promise.all([fetchMyCircles(), fetchCirclesSharingRecipe(recipeId)])
+    Promise.all([fetchMyCircles(currentUser.id), fetchCirclesSharingRecipe(recipeId)])
       .then(([myCircles, sharedIds]) => {
         setCircles(myCircles);
         setSharedCircleIds(new Set(sharedIds));
       })
       .catch((error) => notify('Something went wrong', getErrorMessage(error, 'Could not load your circles.')))
       .finally(() => setIsLoading(false));
-  }, [visible, recipeId]);
+  }, [visible, recipeId, currentUser.id]);
 
   const handleToggle = async (circleId: string) => {
     const isShared = sharedCircleIds.has(circleId);
