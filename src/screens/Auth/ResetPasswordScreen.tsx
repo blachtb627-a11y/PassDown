@@ -18,6 +18,7 @@ export function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = password.length >= 6 && password === confirmPassword;
@@ -32,6 +33,16 @@ export function ResetPasswordScreen() {
     const { error: updateError } = await updatePassword(password);
     setIsSubmitting(false);
     if (updateError) setError(updateError);
+  };
+
+  const handleCancel = async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
+    try {
+      await signOut();
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   return (
@@ -62,7 +73,7 @@ export function ResetPasswordScreen() {
           <View style={styles.buttonWrapper}>
             <PrimaryButton label="Save New Password" onPress={handleSave} disabled={!canSubmit} loading={isSubmitting} />
           </View>
-          <PrimaryButton label="Cancel" variant="outline" onPress={() => signOut()} />
+          <PrimaryButton label="Cancel" variant="outline" loading={isCancelling} onPress={handleCancel} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -38,10 +38,21 @@ export function SettingsScreen() {
   const [notifyMadeThis, setNotifyMadeThis] = useState(true);
   const [notifyDigest, setNotifyDigest] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     isCurrentUserAdmin().then(setIsAdmin);
   }, []);
+
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -58,7 +69,7 @@ export function SettingsScreen() {
         <Text style={[typography.subtitle, styles.sectionSpacing]}>Account</Text>
         <Text style={typography.body}>{session?.user.email}</Text>
         <View style={styles.signOutButton}>
-          <PrimaryButton label="Log Out" variant="outline" onPress={signOut} />
+          <PrimaryButton label="Log Out" variant="outline" loading={isSigningOut} onPress={handleSignOut} />
         </View>
 
         {isAdmin ? (
