@@ -73,7 +73,7 @@ export function HomeFeedScreen() {
         <View style={styles.bannerTop}>
           <View style={styles.brandRow}>
             <Image source={require('../../assets/logo.png')} style={styles.logoMark} accessibilityIgnoresInvertColors />
-            <Text style={[typography.wordmark, styles.brandText]}>Passed Down</Text>
+            <Text style={[typography.wordmark, styles.brandText]}>PassDown</Text>
           </View>
           <View style={styles.bannerIcons}>
             <Pressable
