@@ -10,6 +10,7 @@ import { SelectModal } from '../components/SelectModal';
 import { EmptyState } from '../components/EmptyState';
 import { useAppState } from '../context/AppStateContext';
 import { Ad, fetchActiveAd, recordAdView } from '../lib/api/ads';
+import { rankByHot } from '../lib/feedRanking';
 import { countries } from '../data/countries';
 import { AppColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -63,7 +64,7 @@ export function HomeFeedScreen() {
 
   const visibleRecipes = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return publishedRecipes.filter((r) => {
+    const filtered = publishedRecipes.filter((r) => {
       if (feedTab === 'following' && !followedAuthorIds.includes(r.author.id)) return false;
       if (selectedCuisine && r.cuisine !== selectedCuisine) return false;
       if (selectedMealType && r.mealType !== selectedMealType) return false;
@@ -73,6 +74,7 @@ export function HomeFeedScreen() {
         .toLowerCase();
       return haystack.includes(q);
     });
+    return rankByHot(filtered);
   }, [publishedRecipes, query, selectedCuisine, selectedMealType, feedTab, followedAuthorIds]);
 
   return (

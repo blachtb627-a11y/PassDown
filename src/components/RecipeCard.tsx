@@ -7,6 +7,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { getCuisineColor } from '../theme/cuisineColors';
 import { radius, spacing } from '../theme/typography';
 import { getRecipeShareUrl } from '../lib/shareLink';
+import { formatRelativeTime } from '../lib/relativeTime';
 import { ShareToCircleModal } from './ShareToCircleModal';
 
 type Props = {
@@ -40,19 +41,24 @@ export function RecipeCard({ recipe, onPress, onPressComments, onToggleSave, onT
 
   return (
     <Pressable onPress={onPress} style={styles.card} accessibilityRole="button" accessibilityLabel={recipe.title}>
-      <Pressable
-        style={styles.authorRow}
-        hitSlop={4}
-        accessibilityLabel={`${recipe.author.name}'s profile`}
-      >
-        <Image
-          source={{ uri: recipe.author.avatarUri ?? 'https://picsum.photos/seed/recipe-author/100' }}
-          style={styles.authorAvatar}
-        />
-        <Text style={typography.meta} numberOfLines={1}>
-          <Text style={typography.bodyBold}>{recipe.author.name}</Text> passed this down
+      <View style={styles.authorRow}>
+        <Pressable
+          style={styles.authorInfo}
+          hitSlop={4}
+          accessibilityLabel={`${recipe.author.name}'s profile`}
+        >
+          <Image
+            source={{ uri: recipe.author.avatarUri ?? 'https://picsum.photos/seed/recipe-author/100' }}
+            style={styles.authorAvatar}
+          />
+          <Text style={typography.meta} numberOfLines={1}>
+            <Text style={typography.bodyBold}>{recipe.author.name}</Text> passed this down
+          </Text>
+        </Pressable>
+        <Text style={[typography.meta, styles.postedAt]} numberOfLines={1}>
+          {formatRelativeTime(recipe.createdAt)}
         </Text>
-      </Pressable>
+      </View>
 
       <View style={styles.photoWrapper}>
         {hasPhoto ? (
@@ -181,13 +187,16 @@ function createStyles(colors: AppColors) {
     authorRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       gap: spacing.sm,
       paddingHorizontal: spacing.sm,
       paddingTop: spacing.sm,
       paddingBottom: spacing.xs,
       minHeight: 32,
     },
+    authorInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     authorAvatar: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.border },
+    postedAt: { flexShrink: 0, marginLeft: spacing.xs },
     photoWrapper: { position: 'relative' },
     photo: {
       width: '100%',
