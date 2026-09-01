@@ -11,6 +11,7 @@ export type RootStackParamList = {
   UserProfile: { userId: string };
   FollowList: { userId: string; mode: 'followers' | 'following'; title: string };
   ShoppingList: undefined;
+  Notifications: undefined;
   Settings: undefined;
   AdminPortal: undefined;
   EditProfile: undefined;

@@ -36,6 +36,7 @@ import {
   toggleShoppingListItem as apiToggleShoppingListItem,
 } from '../lib/api/shoppingList';
 import { uploadPhoto } from '../lib/api/photos';
+import { fetchUnreadNotificationCount, subscribeToNotifications } from '../lib/api/notifications';
 
 const GUEST_USER: Author = {
   id: 'guest',
@@ -103,6 +104,8 @@ type AppStateContextValue = {
   addMadeThisPost: (recipeId: string, localPhotoUri: string, note?: string) => Promise<void>;
   addComment: (recipeId: string, text: string) => void;
   updateProfile: (input: ProfileUpdateInput & { localAvatarUri?: string }) => Promise<void>;
+  unreadNotificationCount: number;
+  refreshUnreadNotificationCount: () => Promise<void>;
   refetch: () => Promise<void>;
 };
 
@@ -121,6 +124,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [followBusyIds, setFollowBusyIds] = useState<Set<string>>(new Set());
   const [ownProfile, setOwnProfile] = useState<Author | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const currentUser: Author = useMemo(() => {
     if (!session?.user) return GUEST_USER;
@@ -145,11 +149,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setShoppingList([]);
       setFollowedAuthorIds([]);
       setOwnProfile(null);
+      setUnreadNotificationCount(0);
       setIsLoaded(true);
       return;
     }
     try {
-      const [feed, myRecipes, saved, liked, cols, list, followed, profile] = await Promise.all([
+      const [feed, myRecipes, saved, liked, cols, list, followed, profile, unreadCount] = await Promise.all([
         fetchFeedRecipes(),
         fetchRecipesByAuthor(userId),
         fetchSavedRecipeIds(userId),
@@ -158,6 +163,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         fetchShoppingList(userId),
         fetchFollowedAuthorIds(userId),
         fetchProfileWithCounts(userId),
+        fetchUnreadNotificationCount(userId),
       ]);
       setRecipes(dedupeRecipesById([...feed, ...myRecipes]));
       setSavedRecipeIds(saved);
@@ -166,11 +172,31 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setShoppingList(list);
       setFollowedAuthorIds(followed);
       if (profile) setOwnProfile(profile);
+      setUnreadNotificationCount(unreadCount);
     } catch (error) {
       console.error('Failed to load PassDown data', error);
     } finally {
       setIsLoaded(true);
     }
+  }, [userId]);
+
+  const refreshUnreadNotificationCount = useCallback(async () => {
+    if (!userId) return;
+    try {
+      setUnreadNotificationCount(await fetchUnreadNotificationCount(userId));
+    } catch (error) {
+      console.error('Failed to refresh unread notification count', error);
+    }
+  }, [userId]);
+
+  // Live badge updates: bump the count the instant a trigger inserts a new
+  // notification, rather than waiting for the next full refetch.
+  useEffect(() => {
+    if (!userId) return;
+    const unsubscribe = subscribeToNotifications(userId, () => {
+      setUnreadNotificationCount((prev) => prev + 1);
+    });
+    return unsubscribe;
   }, [userId]);
 
   useEffect(() => {
@@ -413,6 +439,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       addMadeThisPost,
       addComment,
       updateProfile,
+      unreadNotificationCount,
+      refreshUnreadNotificationCount,
       refetch,
     };
   }, [
@@ -425,6 +453,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     followBusyIds,
     isLoaded,
     currentUser,
+    unreadNotificationCount,
+    refreshUnreadNotificationCount,
     refetch,
   ]);
 

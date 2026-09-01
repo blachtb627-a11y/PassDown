@@ -23,7 +23,15 @@ type FeedTab = 'public' | 'following';
 
 export function HomeFeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { recipes, savedRecipeIds, likedRecipeIds, followedAuthorIds, toggleSaveRecipe, toggleLikeRecipe } = useAppState();
+  const {
+    recipes,
+    savedRecipeIds,
+    likedRecipeIds,
+    followedAuthorIds,
+    toggleSaveRecipe,
+    toggleLikeRecipe,
+    unreadNotificationCount,
+  } = useAppState();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [feedTab, setFeedTab] = useState<FeedTab>('public');
@@ -84,7 +92,23 @@ export function HomeFeedScreen() {
             >
               <Ionicons name="cart-outline" size={24} color={colors.onHeaderBanner} />
             </Pressable>
-            <Ionicons name="notifications-outline" size={24} color={colors.onHeaderBanner} accessibilityLabel="Notifications" />
+            <Pressable
+              onPress={() => navigation.navigate('Notifications')}
+              accessibilityRole="button"
+              accessibilityLabel={
+                unreadNotificationCount > 0 ? `Notifications, ${unreadNotificationCount} unread` : 'Notifications'
+              }
+              style={styles.cartButton}
+            >
+              <Ionicons name="notifications-outline" size={24} color={colors.onHeaderBanner} />
+              {unreadNotificationCount > 0 ? (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
           </View>
         </View>
 
@@ -213,6 +237,19 @@ function createStyles(colors: AppColors) {
     brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     bannerIcons: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     cartButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+    notificationBadge: {
+      position: 'absolute',
+      top: 2,
+      right: 2,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      paddingHorizontal: 3,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    notificationBadgeText: { color: colors.white, fontSize: 10, fontWeight: '700' },
     logoMark: { width: 30, height: 30 },
     brandText: { color: colors.onHeaderBanner },
     searchBarWrapper: {
