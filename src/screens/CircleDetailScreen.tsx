@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -38,6 +39,22 @@ function mergeMessages(existing: CircleMessage[], incoming: CircleMessage[]): Ci
   const byId = new Map(existing.map((m) => [m.id, m]));
   for (const m of incoming) byId.set(m.id, m);
   return Array.from(byId.values()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+// Chat timestamps read as a clock time ("3:45 PM"), not "X ago" like a
+// notification — that's the convention every messaging app uses, since "5
+// min ago" goes stale-looking the moment you glance back at the thread.
+function formatMessageTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+// Consecutive messages from the same person within a few minutes are one
+// visual "turn" — repeating their name and avatar on every line would just
+// be noise, the way no real chat app does that.
+const GROUPING_WINDOW_MS = 5 * 60 * 1000;
+function isGroupedWithPrevious(current: CircleMessage, previous: CircleMessage | undefined): boolean {
+  if (!previous || previous.authorId !== current.authorId) return false;
+  return new Date(current.createdAt).getTime() - new Date(previous.createdAt).getTime() < GROUPING_WINDOW_MS;
 }
 
 const headerButtonStyle = {
@@ -207,13 +224,41 @@ export function CircleDetailScreen() {
           ListEmptyComponent={
             <EmptyState icon="chatbubbles-outline" message="No messages yet — say hello to the circle!" />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const author = membersById.get(item.authorId);
             const isOwn = item.authorId === currentUser.id;
+            const grouped = isGroupedWithPrevious(item, messages[index - 1]);
             return (
-              <View style={styles.messageRow}>
-                <Text style={typography.bodyBold}>{isOwn ? 'You' : author?.name ?? 'Someone'}</Text>
-                <Text style={typography.body}>{item.text}</Text>
+              <View style={[styles.messageRow, isOwn && styles.messageRowOwn, grouped && styles.messageRowGrouped]}>
+                {!isOwn ? (
+                  grouped ? (
+                    <View style={styles.messageAvatarSpacer} />
+                  ) : (
+                    <Image
+                      source={{ uri: author?.avatarUri ?? 'https://picsum.photos/seed/user-avatar/200' }}
+                      style={styles.messageAvatar}
+                    />
+                  )
+                ) : null}
+                <View style={[styles.bubbleColumn, isOwn && styles.bubbleColumnOwn]}>
+                  {!isOwn && !grouped ? (
+                    <Text style={[typography.meta, styles.senderName]}>{author?.name ?? 'Someone'}</Text>
+                  ) : null}
+                  <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
+                    <Text style={[typography.body, isOwn ? styles.bubbleTextOwn : styles.bubbleTextOther]}>
+                      {item.text}
+                    </Text>
+                    <Text
+                      style={[
+                        typography.meta,
+                        styles.bubbleTime,
+                        isOwn ? styles.bubbleTimeOwn : styles.bubbleTimeOther,
+                      ]}
+                    >
+                      {formatMessageTime(item.createdAt)}
+                    </Text>
+                  </View>
+                </View>
               </View>
             );
           }}
@@ -322,7 +367,40 @@ function createStyles(colors: AppColors, typography: AppTypography) {
     },
     recipesRow: { flexGrow: 0, marginBottom: spacing.sm },
     recipeTile: { width: 90, marginRight: spacing.sm },
-    messageRow: { marginBottom: spacing.md },
+    messageRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: spacing.xs,
+      marginBottom: spacing.sm,
+    },
+    messageRowOwn: { justifyContent: 'flex-end' },
+    messageRowGrouped: { marginBottom: 2 },
+    messageAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.border },
+    messageAvatarSpacer: { width: 28, height: 28 },
+    bubbleColumn: { alignItems: 'flex-start', maxWidth: '78%' },
+    bubbleColumnOwn: { alignItems: 'flex-end' },
+    senderName: { marginBottom: 2, marginLeft: spacing.sm, color: colors.textMuted },
+    bubble: {
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.sm,
+      paddingTop: spacing.xs,
+      paddingBottom: 4,
+    },
+    bubbleOther: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderBottomLeftRadius: 4,
+    },
+    bubbleOwn: {
+      backgroundColor: colors.primary,
+      borderBottomRightRadius: 4,
+    },
+    bubbleTextOther: { color: colors.text },
+    bubbleTextOwn: { color: colors.white },
+    bubbleTime: { fontSize: 10, alignSelf: 'flex-end', marginTop: 2 },
+    bubbleTimeOther: { color: colors.textMuted },
+    bubbleTimeOwn: { color: 'rgba(255,255,255,0.8)' },
     inputRow: {
       flexDirection: 'row',
       alignItems: 'flex-end',

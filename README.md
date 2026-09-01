@@ -194,7 +194,7 @@ npx supabase functions deploy translate-recipe --project-ref <your-project-ref>
 
 ## Circle group chat
 
-Opening a circle now shows its Shared Recipes row plus a group chat every member can post to and read — a normal name-and-message feed with a text box pinned to the bottom, no bubbles or read receipts. A **Members** button in the top-right of the header (`src/screens/CircleMembersScreen.tsx`) is where the roster, adding people, removing people, and leaving/deleting the circle all live now — that used to be the main content of a circle's screen, moved out to make room for the chat.
+Opening a circle now shows its Shared Recipes row plus a group chat every member can post to and read — chat bubbles (yours on the right in the brand color, everyone else's on the left), each with a clock-time stamp, and consecutive messages from the same person grouped under one name/avatar instead of repeating it on every line. A text box is pinned to the bottom. A **Members** button in the top-right of the header (`src/screens/CircleMembersScreen.tsx`) is where the roster, adding people, removing people, and leaving/deleting the circle all live now — that used to be the main content of a circle's screen, moved out to make room for the chat.
 
 New messages appear for every other member without them needing to refresh, via Supabase Realtime (`src/lib/api/circleMessages.ts`'s `subscribeToCircleMessages`, a `postgres_changes` subscription filtered to that circle). Realtime still enforces the table's own row-level security per subscriber, so a member of one circle never receives another circle's messages even though the whole table is broadcast-enabled.
 
